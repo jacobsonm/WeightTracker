@@ -1,0 +1,183 @@
+:root {
+  --bg: #f4f7f6;
+  --surface: #ffffff;
+  --text: #1a2b28;
+  --muted: #5c6f6b;
+  --accent: #0d7a6f;
+  --accent-hover: #096158;
+  --border: #d6e2df;
+  --danger: #b42318;
+  --danger-hover: #912018;
+  --shadow: 0 8px 24px rgba(26, 43, 40, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: linear-gradient(160deg, #e8f2f0 0%, var(--bg) 40%);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+header {
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+h2 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.field-row {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+input {
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+input:focus {
+  outline: 2px solid rgba(13, 122, 111, 0.35);
+  border-color: var(--accent);
+}
+
+.btn {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 600;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn.danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.875rem;
+}
+
+.btn.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.status {
+  min-height: 1.25rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+.status.success {
+  color: var(--accent-hover);
+}
+
+.hidden {
+  display: none;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 280px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+@media (min-width: 640px) {
+  .field-row {
+    grid-template-columns: 140px 1fr auto;
+    align-items: center;
+  }
+
+  #weigh-in-form .field-row:last-of-type {
+    grid-template-columns: 140px 1fr;
+  }
+
+  #weigh-in-form .btn.primary {
+    margin-left: 140px;
+  }
+}

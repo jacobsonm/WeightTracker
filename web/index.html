@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weight Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>Weight Tracker</h1>
+        <p class="subtitle">Track weigh-ins in pounds (lbs)</p>
+      </header>
+
+      <section class="card" aria-labelledby="user-heading">
+        <h2 id="user-heading">User</h2>
+        <div class="field-row">
+          <label for="username">Username</label>
+          <input
+            id="username"
+            type="text"
+            autocomplete="username"
+            placeholder="e.g. mike"
+          />
+          <button type="button" id="load-btn" class="btn primary">Load history</button>
+        </div>
+        <p id="user-hint" class="hint">
+          Username is stored in this browser until you change it.
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="add-heading">
+        <h2 id="add-heading">Add weigh-in</h2>
+        <form id="weigh-in-form">
+          <div class="field-row">
+            <label for="weight">Weight (lbs)</label>
+            <input
+              id="weight"
+              type="number"
+              step="0.1"
+              min="0.1"
+              required
+              placeholder="185.4"
+            />
+          </div>
+          <div class="field-row">
+            <label for="datetime">Date &amp; time</label>
+            <input id="datetime" type="datetime-local" required />
+          </div>
+          <button type="submit" class="btn primary">Save weigh-in</button>
+        </form>
+        <p class="hint">
+          Saving again with the same date and time updates that entry.
+        </p>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <section class="card" aria-labelledby="chart-heading">
+        <h2 id="chart-heading">Trend</h2>
+        <div class="chart-wrap">
+          <canvas id="weight-chart" aria-label="Weight over time line chart"></canvas>
+        </div>
+        <p id="chart-empty" class="hint hidden">No data to chart yet.</p>
+      </section>
+
+      <section class="card" aria-labelledby="history-heading">
+        <h2 id="history-heading">History</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Date &amp; time (UTC)</th>
+                <th scope="col">Weight (lbs)</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+        <p id="history-empty" class="hint hidden">No weigh-ins loaded.</p>
+      </section>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

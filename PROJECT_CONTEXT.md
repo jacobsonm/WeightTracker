@@ -44,7 +44,8 @@ The storage mechanism for offline usage can be determined at a later time.
 
 ### Front End
 
-- Device/platform dependent; approach to be determined at a later date
+- **Web client** — static HTML/CSS/JS in [`web/`](./web/), hosted on **S3** and served via **CloudFront** (HTTPS). The browser calls the existing **API Gateway** REST API (CORS enabled). See [`web/README.md`](./web/README.md).
+- iOS, Android, and Windows clients — to be determined at a later date
 
 ### Other AWS Services
 
