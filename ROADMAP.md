@@ -82,23 +82,29 @@ Prioritized plan for future work. This document can change as requirements evolv
 
 | Metric | Definition (to confirm when building) |
 |--------|----------------------------------------|
-| **Starting weight** | Earliest weigh-in in range, or weight at start of current goal period |
+| **Starting weight** | Weight from the **first weigh-in** in history (all time) |
 | **Current weight** | Most recent weigh-in |
-| **Total weight lost** | Starting weight − current weight (handle gain as negative “lost”) |
-| **% progress to next goal** | Progress toward the next intermediate goal from #3 |
-| **% progress to ideal weight** | Progress toward ideal weight estimate from #3 (profile-based) |
+| **Total change since first weigh-in** | `starting weight − current weight`; UI shows **weight lost** or **weight gained** (absolute value) with wording that matches the direction—not a negative “lost” when the user gained |
+| **% progress to next goal** | Progress toward the next intermediate goal from #3; if none configured, show prompt text instead of a value (see **Decisions**) |
+| **% progress to target weight** | Progress toward user-set `targetWeight` from #3 (not Devine `idealWeight`); if unset, show prompt text instead of a value (see **Decisions**) |
+
+**Decisions (v1)**  
+- Even with a long history, **total change** always uses the **first recorded weigh-in** as the starting point—not a rolling “goal period” start date.  
+- UI should say explicitly that the figure is **since first measurement** so it is not confused with progress toward the current target.  
+- If current weight is **above** starting weight, show a **gain** (e.g. “Gained 3.2 lbs since first weigh-in”); if **below**, show a **loss**. Labels and copy must reflect gain vs loss, not always “lost.”  
+- If **no intermediate goals** are set, do not show a % for goal progress—show copy such as **“Add a goal to show goal progress”** (exact wording can be tuned in UI).  
+- If **`targetWeight`** is not set, do not show target progress %—show copy such as **“Add a target weight to show progress”**.
 
 **Depends on**  
-#3 (target weight, intermediate goals, ideal weight estimate). Needs weigh-in history (#1) and profile (#2).
+#3 (`targetWeight`, intermediate goals). Needs weigh-in history (#1) and profile (#2). Computed `idealWeight` / `idealWeightRange` remain reference-only (chart/profile), not used for this metric.
 
 **Likely direction**  
 - Compute in web from existing `GET /weigh-ins` + profile/goals APIs, or add a `GET /progress` summary endpoint if logic grows.  
-- Show as a card above the chart/history; clarify labels (e.g. “since first weigh-in” vs “since goal start”).
+- Show as a card above the chart/history.
 
-**Open questions**  
-- How is “starting weight” defined if the user has a long history?  
-- Show progress when total change is a gain?  
-- What if ideal weight or next goal is not set yet (hide vs placeholder)?
+**Future enhancement (after #4)**  
+- When history grows past a threshold (TBD), **prompt the user** to set a **new starting weight** for progress summaries—e.g. a prior intermediate goal they met, so total change (lost/gained) and related metrics can reflect the **current journey** without losing all-time stats.  
+- Likely needs a stored field on profile (e.g. `progressStartDateTime` / `progressStartWeight`) and UI to accept or dismiss the prompt; design TBD.
 
 **Touches**  
 Web UI (`web/`), possibly goals API from #3, [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md).
@@ -245,6 +251,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 - Point-in-time recovery / production hardening
 - PATCH-style partial updates, duplicate detection on POST
 - Enable Cognito self sign-up
+- **Progress “new starting weight”** — user prompt after long history; reset baseline (often a met goal); see #4 future enhancement
 
 ---
 
@@ -257,3 +264,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-05-31 | User profiles: UserProfiles table, GET/PUT /profile, web form |
 | 2026-05-31 | Goals + ideal weight (#3): profile fields, API, chart reference lines |
 | 2026-05-31 | Added #8 IBW and BMI improvements (chart band, clearer labels, current BMI) |
+| 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
+| 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
+| 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |
+| 2026-05-31 | #4: prompt copy when target weight or goals are unset |
