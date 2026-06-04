@@ -74,8 +74,8 @@ Prioritized plan for future work. This document can change as requirements evolv
 
 | | |
 |---|---|
-| **Priority** | 4 (next) |
-| **Status** | planned |
+| **Priority** | 4 |
+| **Status** | done |
 | **Scope** | A web view (section or dashboard) showing key progress metrics. |
 
 **Metrics to display**
@@ -115,7 +115,7 @@ Web UI (`web/`), possibly goals API from #3, [`DYNAMODB_SCHEMA.md`](./DYNAMODB_S
 
 | | |
 |---|---|
-| **Priority** | 5 |
+| **Priority** | 5 (next) |
 | **Status** | planned |
 | **Scope** | Reorganize the signed-in web app into a **home** landing view plus **Profile** and **History** destinations with clear navigation. |
 
@@ -267,6 +267,7 @@ Milestones already in place:
 - Cognito authentication (admin-provisioned; self sign-up disabled)
 - User profiles table, API, and web form
 - Target weight, intermediate goals, ideal weight estimate, chart goal lines
+- Web progress summary (starting/current weight, change since first weigh-in, goal and target %)
 
 See [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md) and [`web/README.md`](./web/README.md).
 
@@ -296,6 +297,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-05-31 | Goals + ideal weight (#3): profile fields, API, chart reference lines |
 | 2026-05-31 | Added #9 IBW and BMI improvements (was #8; chart band, labels, current BMI) |
 | 2026-05-31 | Added #5 web layout/navigation; renumbered CloudFront, envs, Android, IBW |
+| 2026-06-04 | #4 done: web progress summary (`web/progress.js`) |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |

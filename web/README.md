@@ -23,6 +23,10 @@ CDK uploads these files to S3 and serves them via CloudFront. `config.js` is gen
 
 Open the **`WebUrl`** output after deploy.
 
+## Features
+
+- Profile, weigh-ins, trend chart, and **progress summary** (computed in the browser from weigh-ins + profile; see `progress.js`).
+
 ## API details
 
 See [`../DYNAMODB_SCHEMA.md`](../DYNAMODB_SCHEMA.md).

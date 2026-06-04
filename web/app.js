@@ -24,10 +24,13 @@ const els = {
   historyEmpty: document.getElementById('history-empty'),
   chartCanvas: document.getElementById('weight-chart'),
   chartEmpty: document.getElementById('chart-empty'),
+  progressSummary: document.getElementById('progress-summary'),
+  progressEmpty: document.getElementById('progress-empty'),
 };
 
 const auth = window.WeightTrackerAuth;
 const dt = window.WeightTrackerDateTime;
+const progress = window.WeightTrackerProgress;
 let chart;
 let loadedProfile = null;
 let chartWeighIns = [];
@@ -274,6 +277,75 @@ async function deleteWeighIn(dateTime) {
   return apiRequest(`weigh-ins/${encoded}`, { method: 'DELETE' });
 }
 
+function appendProgressMetric(container, title, value, detail, extraClass = '') {
+  const item = document.createElement('dl');
+  item.className = `progress-metric${extraClass ? ` ${extraClass}` : ''}`;
+
+  const dtEl = document.createElement('dt');
+  dtEl.textContent = title;
+
+  const ddEl = document.createElement('dd');
+  ddEl.textContent = value;
+
+  item.append(dtEl, ddEl);
+
+  if (detail) {
+    const detailEl = document.createElement('p');
+    detailEl.className = 'progress-detail';
+    detailEl.textContent = detail;
+    item.appendChild(detailEl);
+  }
+
+  container.appendChild(item);
+}
+
+function renderProgressSummary(weighIns, profile = loadedProfile) {
+  const summary = progress.computeProgressSummary(weighIns, profile);
+
+  if (!summary.hasWeighIns) {
+    els.progressSummary.classList.add('hidden');
+    els.progressSummary.replaceChildren();
+    els.progressEmpty.classList.remove('hidden');
+    return;
+  }
+
+  els.progressEmpty.classList.add('hidden');
+  els.progressSummary.classList.remove('hidden');
+  els.progressSummary.replaceChildren();
+
+  appendProgressMetric(
+    els.progressSummary,
+    'Starting weight',
+    summary.startingWeight.toFixed(1) + ' lbs',
+  );
+  appendProgressMetric(
+    els.progressSummary,
+    'Current weight',
+    summary.currentWeight.toFixed(1) + ' lbs',
+  );
+  appendProgressMetric(
+    els.progressSummary,
+    summary.change.label,
+    summary.change.value,
+  );
+
+  const gp = summary.goalProgress;
+  if (gp.kind === 'prompt') {
+    appendProgressMetric(els.progressSummary, gp.title, gp.message, null, 'prompt');
+  } else if (gp.kind === 'percent') {
+    appendProgressMetric(els.progressSummary, gp.title, gp.value, gp.detail);
+  } else {
+    appendProgressMetric(els.progressSummary, gp.title, gp.value, gp.detail);
+  }
+
+  const tp = summary.targetProgress;
+  if (tp.kind === 'prompt') {
+    appendProgressMetric(els.progressSummary, tp.title, tp.message, null, 'prompt');
+  } else {
+    appendProgressMetric(els.progressSummary, tp.title, tp.value, tp.detail);
+  }
+}
+
 function renderTable(weighIns) {
   els.historyBody.replaceChildren();
 
@@ -437,6 +509,7 @@ async function refreshHistory() {
 
   try {
     const weighIns = await listWeighIns();
+    renderProgressSummary(weighIns, loadedProfile);
     renderTable(weighIns);
     renderChart(weighIns, loadedProfile);
     setStatus(`Loaded ${weighIns.length} weigh-in(s).`, 'success');
