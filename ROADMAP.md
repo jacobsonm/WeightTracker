@@ -100,7 +100,7 @@ Prioritized plan for future work. This document can change as requirements evolv
 
 **Likely direction**  
 - Compute in web from existing `GET /weigh-ins` + profile/goals APIs, or add a `GET /progress` summary endpoint if logic grows.  
-- Show as a card above the chart/history.
+- Implement as a reusable progress summary block; **#5** places it on the home view (below the add weigh-in form).
 
 **Future enhancement (after #4)**  
 - When history grows past a threshold (TBD), **prompt the user** to set a **new starting weight** for progress summaries—e.g. a prior intermediate goal they met, so total change (lost/gained) and related metrics can reflect the **current journey** without losing all-time stats.  
@@ -111,11 +111,42 @@ Web UI (`web/`), possibly goals API from #3, [`DYNAMODB_SCHEMA.md`](./DYNAMODB_S
 
 ---
 
-### 5. Single CloudFront hostname for web + API
+### 5. Web layout and navigation
 
 | | |
 |---|---|
 | **Priority** | 5 |
+| **Status** | planned |
+| **Scope** | Reorganize the signed-in web app into a **home** landing view plus **Profile** and **History** destinations with clear navigation. |
+
+**Decisions**
+
+| View | Contents |
+|------|----------|
+| **Home (default)** | **Add weigh-in form** at the top, then **progress summary** (#4) directly underneath |
+| **History** | **Trend chart** and **tabular weigh-in history** (and delete actions) together on one view |
+| **Profile** | Existing profile form: display name, birthdate, sex, height, timezone, target weight, intermediate goals, ideal-weight estimate text |
+
+- Add **navigation** in the UI to move between Home, Profile, and History (tabs, header links, or similar—choose during implementation).
+- Account / sign-in UI remains available across views (e.g. header).
+
+**Depends on**  
+#4 (progress summary). Reuses existing web features from #1–#3; no new API required for basic layout.
+
+**Likely direction**  
+- Refactor `web/index.html` / `app.js` / `styles.css` from a single long scroll into named views (show/hide sections or light client-side routing).  
+- Default signed-in landing = **Home**, not Profile or History.
+
+**Touches**  
+`web/index.html`, `web/app.js`, `web/styles.css`.
+
+---
+
+### 6. Single CloudFront hostname for web + API
+
+| | |
+|---|---|
+| **Priority** | 6 |
 | **Status** | planned |
 | **Scope** | One CloudFront URL serves the static web app and proxies API traffic (no separate API Gateway URL in the browser). |
 
@@ -136,11 +167,11 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 
 ---
 
-### 6. Separate AWS environments (production and development)
+### 7. Separate AWS environments (production and development)
 
 | | |
 |---|---|
-| **Priority** | 6 |
+| **Priority** | 7 |
 | **Status** | planned |
 | **Scope** | Isolated **dev** and **prod** stacks (or accounts), each with its own Cognito pool, DynamoDB tables, API, and CloudFront site. |
 
@@ -163,11 +194,11 @@ CDK app entry, stack props, docs, possibly GitHub Actions (future).
 
 ---
 
-### 7. Android app
+### 8. Android app
 
 | | |
 |---|---|
-| **Priority** | 7 |
+| **Priority** | 8 |
 | **Status** | planned |
 | **Scope** | Native **Android** client: sign in, record weigh-ins, view history/chart, sync with existing API. |
 
@@ -180,7 +211,7 @@ CDK app entry, stack props, docs, possibly GitHub Actions (future).
 - Technology TBD (Kotlin/Jetpack Compose is a common default).
 
 **Depends on**  
-Stable API and auth (#1); profile (#2) optional at v1; #5 (single hostname) may simplify base URL configuration.
+Stable API and auth (#1); profile (#2) optional at v1; #6 (single hostname) may simplify base URL configuration.
 
 **Open questions**  
 - Minimum v1 feature set vs parity with web?  
@@ -192,11 +223,11 @@ New `android/` (or similar) project; no backend change required for basic parity
 
 ---
 
-### 8. IBW and BMI improvements
+### 9. IBW and BMI improvements
 
 | | |
 |---|---|
-| **Priority** | 8 |
+| **Priority** | 9 |
 | **Status** | planned |
 | **Scope** | Improve how ideal body weight (IBW) and BMI reference information is presented on web; keep current behavior until this item is built. |
 
@@ -263,7 +294,8 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-05-31 | Roadmap: ideal-weight inputs documented under item 3 |
 | 2026-05-31 | User profiles: UserProfiles table, GET/PUT /profile, web form |
 | 2026-05-31 | Goals + ideal weight (#3): profile fields, API, chart reference lines |
-| 2026-05-31 | Added #8 IBW and BMI improvements (chart band, clearer labels, current BMI) |
+| 2026-05-31 | Added #9 IBW and BMI improvements (was #8; chart band, labels, current BMI) |
+| 2026-05-31 | Added #5 web layout/navigation; renumbered CloudFront, envs, Android, IBW |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |
