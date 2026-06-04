@@ -1,8 +1,21 @@
-const STORAGE_KEY = 'weightTracker.username';
-
 const els = {
-  username: document.getElementById('username'),
-  loadBtn: document.getElementById('load-btn'),
+  signInBtn: document.getElementById('sign-in-btn'),
+  signOutBtn: document.getElementById('sign-out-btn'),
+  signedOut: document.getElementById('signed-out'),
+  signedIn: document.getElementById('signed-in'),
+  userLabel: document.getElementById('user-label'),
+  appContent: document.getElementById('app-content'),
+  profileForm: document.getElementById('profile-form'),
+  profileUsername: document.getElementById('profile-username'),
+  profileBirthdate: document.getElementById('profile-birthdate'),
+  profileSex: document.getElementById('profile-sex'),
+  profileHeight: document.getElementById('profile-height'),
+  profileTimezone: document.getElementById('profile-timezone'),
+  timezoneList: document.getElementById('timezone-list'),
+  idealWeightDisplay: document.getElementById('ideal-weight-display'),
+  profileTarget: document.getElementById('profile-target'),
+  intermediateGoalsList: document.getElementById('intermediate-goals-list'),
+  addGoalBtn: document.getElementById('add-goal-btn'),
   form: document.getElementById('weigh-in-form'),
   weight: document.getElementById('weight'),
   datetime: document.getElementById('datetime'),
@@ -13,7 +26,11 @@ const els = {
   chartEmpty: document.getElementById('chart-empty'),
 };
 
+const auth = window.WeightTrackerAuth;
+const dt = window.WeightTrackerDateTime;
 let chart;
+let loadedProfile = null;
+let chartWeighIns = [];
 
 function getApiBaseUrl() {
   const base = window.APP_CONFIG?.apiBaseUrl;
@@ -30,41 +47,49 @@ function setStatus(message, type = '') {
   els.status.className = type ? `status ${type}` : 'status';
 }
 
-function getUsername() {
-  return els.username.value.trim();
-}
-
-function saveUsername(username) {
-  localStorage.setItem(STORAGE_KEY, username);
-}
-
-function loadStoredUsername() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    els.username.value = stored;
-  }
+function getDisplayTimezone() {
+  return dt.getProfileTimezone(loadedProfile);
 }
 
 function setDefaultDateTime() {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  els.datetime.value = local.toISOString().slice(0, 16);
+  els.datetime.value = dt.nowForDatetimeLocal(getDisplayTimezone());
 }
 
 function toApiDateTime(datetimeLocalValue) {
-  return new Date(datetimeLocalValue).toISOString();
+  return dt.datetimeLocalToUtcIso(datetimeLocalValue, getDisplayTimezone());
 }
 
-function formatDisplayDateTime(isoUtc) {
-  return isoUtc.replace('T', ' ').replace('Z', ' UTC');
+function updateAuthUi() {
+  const signedIn = auth.isAuthenticated();
+  els.signedOut.classList.toggle('hidden', signedIn);
+  els.signedIn.classList.toggle('hidden', !signedIn);
+  els.appContent.classList.toggle('hidden', !signedIn);
+
+  if (signedIn) {
+    els.userLabel.textContent = auth.getUserDisplayName();
+  }
 }
 
 async function apiRequest(path, options = {}) {
+  const token = auth.getIdToken();
+  if (!token) {
+    throw new Error('You must sign in to continue.');
+  }
+
   const url = `${getApiBaseUrl()}${path.replace(/^\//, '')}`;
   const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
   });
+
+  if (response.status === 401) {
+    auth.signOut();
+    throw new Error('Session expired. Please sign in again.');
+  }
 
   if (response.status === 204) {
     return null;
@@ -75,35 +100,178 @@ async function apiRequest(path, options = {}) {
 
   if (!response.ok) {
     const message = data?.error ?? `Request failed (${response.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return data;
 }
 
-async function listWeighIns(username) {
-  const params = new URLSearchParams({ Username: username });
-  const data = await apiRequest(`weigh-ins?${params}`);
+async function getProfile() {
+  try {
+    return await apiRequest('profile');
+  } catch (err) {
+    if (err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+async function saveProfile(profile) {
+  return apiRequest('profile', {
+    method: 'PUT',
+    body: JSON.stringify(profile),
+  });
+}
+
+function updateIdealWeightDisplay(profile) {
+  if (!profile?.idealWeight) {
+    els.idealWeightDisplay.classList.add('hidden');
+    return;
+  }
+
+  const range = profile.idealWeightRange;
+  const rangeText = range
+    ? ` (healthy BMI range: ${range.min}–${range.max} lbs)`
+    : '';
+  els.idealWeightDisplay.textContent = `Estimated ideal weight: ${profile.idealWeight} lbs${rangeText}`;
+  els.idealWeightDisplay.classList.remove('hidden');
+}
+
+function createGoalRow(goal = {}) {
+  const row = document.createElement('div');
+  row.className = 'goal-row';
+
+  const weightInput = document.createElement('input');
+  weightInput.type = 'number';
+  weightInput.step = '0.1';
+  weightInput.min = '50';
+  weightInput.max = '600';
+  weightInput.placeholder = 'Weight';
+  weightInput.className = 'goal-weight';
+  weightInput.value = goal.weight ?? '';
+
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.placeholder = 'Label (optional)';
+  labelInput.className = 'goal-label';
+  labelInput.maxLength = 50;
+  labelInput.value = goal.label ?? '';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn danger';
+  removeBtn.textContent = 'Remove';
+  removeBtn.addEventListener('click', () => row.remove());
+
+  row.append(weightInput, labelInput, removeBtn);
+  return row;
+}
+
+function fillGoalsForm(goals) {
+  els.intermediateGoalsList.replaceChildren();
+  for (const goal of goals ?? []) {
+    els.intermediateGoalsList.appendChild(createGoalRow(goal));
+  }
+}
+
+function readGoalsFromForm() {
+  const goals = [];
+  for (const row of els.intermediateGoalsList.querySelectorAll('.goal-row')) {
+    const weight = Number(row.querySelector('.goal-weight').value);
+    const label = row.querySelector('.goal-label').value.trim();
+    if (!Number.isFinite(weight)) {
+      continue;
+    }
+    goals.push(label ? { weight, label } : { weight });
+  }
+  return goals;
+}
+
+function fillProfileForm(profile) {
+  els.profileUsername.value = profile.username;
+  els.profileBirthdate.value = profile.birthdate;
+  els.profileSex.value = profile.sex;
+  els.profileHeight.value = String(profile.heightInches);
+  els.profileTimezone.value =
+    profile.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  els.profileTarget.value =
+    profile.targetWeight !== undefined ? String(profile.targetWeight) : '';
+  fillGoalsForm(profile.intermediateGoals);
+  updateIdealWeightDisplay(profile);
+}
+
+function buildProfilePayload() {
+  const targetRaw = els.profileTarget.value.trim();
+  const payload = {
+    username: els.profileUsername.value.trim(),
+    birthdate: els.profileBirthdate.value,
+    sex: els.profileSex.value,
+    heightInches: Number(els.profileHeight.value),
+    timezone: els.profileTimezone.value.trim(),
+    intermediateGoals: readGoalsFromForm(),
+  };
+
+  if (targetRaw !== '') {
+    payload.targetWeight = Number(targetRaw);
+  }
+
+  return payload;
+}
+
+function applyLoadedProfile(profile) {
+  loadedProfile = profile;
+  if (profile) {
+    fillProfileForm(profile);
+  }
+  setDefaultDateTime();
+}
+
+async function loadProfile() {
+  try {
+    const profile = await getProfile();
+    applyLoadedProfile(profile);
+    if (!profile) {
+      els.profileTimezone.value =
+        Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+  } catch (err) {
+    setStatus(err.message, 'error');
+  }
+}
+
+async function onProfileSubmit(event) {
+  event.preventDefault();
+
+  setStatus('Saving profile…');
+
+  try {
+    const profile = await saveProfile(buildProfilePayload());
+    applyLoadedProfile(profile);
+    await refreshHistory();
+    setStatus('Profile saved.', 'success');
+  } catch (err) {
+    setStatus(err.message, 'error');
+  }
+}
+
+async function listWeighIns() {
+  const data = await apiRequest('weigh-ins');
   return data.weighIns ?? [];
 }
 
-async function addWeighIn(username, dateTime, weight) {
+async function addWeighIn(dateTime, weight) {
   return apiRequest('weigh-ins', {
     method: 'POST',
-    body: JSON.stringify({
-      Username: username,
-      DateTime: dateTime,
-      weight,
-    }),
+    body: JSON.stringify({ DateTime: dateTime, weight }),
   });
 }
 
-async function deleteWeighIn(username, dateTime) {
+async function deleteWeighIn(dateTime) {
   const encoded = encodeURIComponent(dateTime);
-  const params = new URLSearchParams({ Username: username });
-  return apiRequest(`weigh-ins/${encoded}?${params}`, {
-    method: 'DELETE',
-  });
+  return apiRequest(`weigh-ins/${encoded}`, { method: 'DELETE' });
 }
 
 function renderTable(weighIns) {
@@ -120,7 +288,10 @@ function renderTable(weighIns) {
     const row = document.createElement('tr');
 
     const dateCell = document.createElement('td');
-    dateCell.textContent = formatDisplayDateTime(entry.DateTime);
+    dateCell.textContent = dt.formatDisplayDateTime(
+      entry.DateTime,
+      getDisplayTimezone(),
+    );
 
     const weightCell = document.createElement('td');
     weightCell.textContent = entry.weight.toFixed(1);
@@ -138,7 +309,20 @@ function renderTable(weighIns) {
   }
 }
 
-function renderChart(weighIns) {
+function buildReferenceLineDataset(label, weight, color, dash, pointCount) {
+  return {
+    label,
+    data: Array.from({ length: pointCount }, () => weight),
+    borderColor: color,
+    borderWidth: 2,
+    borderDash: dash,
+    pointRadius: 0,
+    fill: false,
+    tension: 0,
+  };
+}
+
+function renderChart(weighIns, profile = loadedProfile) {
   const sorted = [...weighIns].sort((a, b) =>
     a.DateTime.localeCompare(b.DateTime),
   );
@@ -154,8 +338,57 @@ function renderChart(weighIns) {
 
   els.chartEmpty.classList.add('hidden');
 
-  const labels = sorted.map((w) => formatDisplayDateTime(w.DateTime));
+  chartWeighIns = sorted;
+  const timeZone = getDisplayTimezone();
+  const labels = sorted.map((w) =>
+    dt.formatDisplayDate(w.DateTime, timeZone),
+  );
   const values = sorted.map((w) => w.weight);
+
+  const datasets = [
+    {
+      label: 'Weight (lbs)',
+      data: values,
+      borderColor: '#0d7a6f',
+      backgroundColor: 'rgba(13, 122, 111, 0.12)',
+      fill: true,
+      tension: 0.2,
+      pointRadius: 4,
+    },
+  ];
+
+  if (profile?.targetWeight) {
+    datasets.push(
+      buildReferenceLineDataset(
+        `Target (${profile.targetWeight} lbs)`,
+        profile.targetWeight,
+        '#b42318',
+        [8, 4],
+        labels.length,
+      ),
+    );
+  }
+
+  if (profile?.idealWeight) {
+    datasets.push(
+      buildReferenceLineDataset(
+        `Ideal (${profile.idealWeight} lbs)`,
+        profile.idealWeight,
+        '#175cd3',
+        [4, 4],
+        labels.length,
+      ),
+    );
+  }
+
+  for (const goal of profile?.intermediateGoals ?? []) {
+    const name = goal.label
+      ? `${goal.label} (${goal.weight} lbs)`
+      : `Goal (${goal.weight} lbs)`;
+    datasets.push(
+      buildReferenceLineDataset(name, goal.weight, '#b54708', [2, 2], labels.length),
+    );
+  }
 
   if (chart) {
     chart.destroy();
@@ -163,20 +396,7 @@ function renderChart(weighIns) {
 
   chart = new Chart(els.chartCanvas, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Weight (lbs)',
-          data: values,
-          borderColor: '#0d7a6f',
-          backgroundColor: 'rgba(13, 122, 111, 0.12)',
-          fill: true,
-          tension: 0.2,
-          pointRadius: 4,
-        },
-      ],
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -187,26 +407,38 @@ function renderChart(weighIns) {
         },
       },
       plugins: {
-        legend: { display: false },
+        legend: { display: datasets.length > 1 },
+        tooltip: {
+          filter: (item) => item.datasetIndex === 0,
+          callbacks: {
+            title(items) {
+              const idx = items[0].dataIndex;
+              return dt.formatDisplayDateTime(
+                chartWeighIns[idx].DateTime,
+                timeZone,
+              );
+            },
+            label(ctx) {
+              return `Weight: ${ctx.parsed.y} lbs`;
+            },
+          },
+        },
       },
     },
   });
 }
 
 async function refreshHistory() {
-  const username = getUsername();
-  if (!username) {
-    setStatus('Enter a username to load history.', 'error');
+  if (!auth.isAuthenticated()) {
     return;
   }
 
-  saveUsername(username);
   setStatus('Loading…');
 
   try {
-    const weighIns = await listWeighIns(username);
+    const weighIns = await listWeighIns();
     renderTable(weighIns);
-    renderChart(weighIns);
+    renderChart(weighIns, loadedProfile);
     setStatus(`Loaded ${weighIns.length} weigh-in(s).`, 'success');
   } catch (err) {
     setStatus(err.message, 'error');
@@ -216,20 +448,13 @@ async function refreshHistory() {
 async function onSubmit(event) {
   event.preventDefault();
 
-  const username = getUsername();
-  if (!username) {
-    setStatus('Enter a username before saving.', 'error');
-    return;
-  }
-
   const weight = Number(els.weight.value);
   const dateTime = toApiDateTime(els.datetime.value);
 
   setStatus('Saving…');
 
   try {
-    await addWeighIn(username, dateTime, weight);
-    saveUsername(username);
+    await addWeighIn(dateTime, weight);
     els.weight.value = '';
     setDefaultDateTime();
     await refreshHistory();
@@ -240,12 +465,7 @@ async function onSubmit(event) {
 }
 
 async function onDelete(entry) {
-  const username = getUsername();
-  if (!username) {
-    return;
-  }
-
-  const label = formatDisplayDateTime(entry.DateTime);
+  const label = dt.formatDisplayDateTime(entry.DateTime, getDisplayTimezone());
   if (!window.confirm(`Delete weigh-in from ${label}?`)) {
     return;
   }
@@ -253,7 +473,7 @@ async function onDelete(entry) {
   setStatus('Deleting…');
 
   try {
-    await deleteWeighIn(username, entry.DateTime);
+    await deleteWeighIn(entry.DateTime);
     await refreshHistory();
     setStatus('Weigh-in deleted.', 'success');
   } catch (err) {
@@ -261,15 +481,27 @@ async function onDelete(entry) {
   }
 }
 
-els.loadBtn.addEventListener('click', refreshHistory);
+function init() {
+  dt.populateTimezoneDatalist(els.timezoneList);
+  updateAuthUi();
+  setDefaultDateTime();
+
+  if (auth.isAuthenticated()) {
+    loadProfile().then(() => refreshHistory());
+  } else if (!window.APP_CONFIG?.auth?.clientId) {
+    setStatus(
+      'Set auth settings in config.js for local use, or open the CloudFront URL after deploy.',
+      'error',
+    );
+  }
+}
+
+els.signInBtn.addEventListener('click', () => auth.signIn());
+els.signOutBtn.addEventListener('click', () => auth.signOut());
+els.addGoalBtn.addEventListener('click', () => {
+  els.intermediateGoalsList.appendChild(createGoalRow());
+});
+els.profileForm.addEventListener('submit', onProfileSubmit);
 els.form.addEventListener('submit', onSubmit);
 
-loadStoredUsername();
-setDefaultDateTime();
-
-if (!window.APP_CONFIG?.apiBaseUrl) {
-  setStatus(
-    'Set apiBaseUrl in config.js for local use, or open the CloudFront URL after deploy.',
-    'error',
-  );
-}
+init();

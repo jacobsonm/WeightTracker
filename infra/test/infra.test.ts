@@ -20,7 +20,11 @@ test('WeighIns DynamoDB table is created with expected keys', () => {
     ],
   });
 
-  template.resourceCountIs('AWS::Lambda::Function', 6);
+  template.resourceCountIs('AWS::Lambda::Function', 8);
+
+  template.hasResourceProperties('AWS::DynamoDB::Table', {
+    TableName: 'UserProfiles',
+  });
   template.hasResourceProperties('AWS::Lambda::Function', {
     Environment: {
       Variables: {
@@ -37,12 +41,13 @@ test('WeighIns DynamoDB table is created with expected keys', () => {
 
   template.hasResourceProperties('AWS::ApiGateway::Method', {
     HttpMethod: 'POST',
-    AuthorizationType: 'NONE',
+    AuthorizationType: 'COGNITO_USER_POOLS',
   });
 
-  template.hasResourceProperties('AWS::ApiGateway::Method', {
-    HttpMethod: 'DELETE',
-    AuthorizationType: 'NONE',
+  template.hasResourceProperties('AWS::Cognito::UserPool', {
+    AdminCreateUserConfig: {
+      AllowAdminCreateUserOnly: true,
+    },
   });
 
   template.hasResourceProperties('AWS::S3::Bucket', {

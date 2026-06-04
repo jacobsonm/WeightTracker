@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signing in… — Weight Tracker</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <p id="status" class="status">Completing sign-in…</p>
+    </div>
+    <script src="../config.js"></script>
+    <script src="../auth.js"></script>
+    <script>
+      WeightTrackerAuth.handleCallback()
+        .then(() => {
+          window.location.replace('/');
+        })
+        .catch((err) => {
+          document.getElementById('status').textContent = err.message;
+          document.getElementById('status').className = 'status error';
+        });
+    </script>
+  </body>
+</html>

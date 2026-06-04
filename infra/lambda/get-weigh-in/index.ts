@@ -1,3 +1,4 @@
+import { getAuthenticatedUserId } from '../shared/auth';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import type {
@@ -35,14 +36,9 @@ function jsonResponse(
   };
 }
 
-function parseKey(
+function parseDateTimePath(
   event: APIGatewayProxyEvent,
-): { username: string; dateTime: string } | { error: string } {
-  const username = event.queryStringParameters?.Username?.trim();
-  if (!username) {
-    return { error: 'Username query parameter is required' };
-  }
-
+): string | { error: string } {
   const dateTime = event.pathParameters?.dateTime?.trim();
   if (!dateTime) {
     return { error: 'DateTime path parameter is required' };
@@ -55,7 +51,7 @@ function parseKey(
     };
   }
 
-  return { username, dateTime };
+  return dateTime;
 }
 
 export async function handler(
@@ -68,9 +64,14 @@ export async function handler(
     return jsonResponse(500, { error: 'Internal server error' });
   }
 
-  const key = parseKey(event);
-  if ('error' in key) {
-    return jsonResponse(400, { error: key.error } satisfies ErrorBody);
+  const userId = getAuthenticatedUserId(event);
+  if (typeof userId === 'object') {
+    return jsonResponse(401, { error: userId.error } satisfies ErrorBody);
+  }
+
+  const dateTime = parseDateTimePath(event);
+  if (typeof dateTime === 'object') {
+    return jsonResponse(400, { error: dateTime.error } satisfies ErrorBody);
   }
 
   try {
@@ -78,8 +79,8 @@ export async function handler(
       new GetCommand({
         TableName: tableName,
         Key: {
-          Username: key.username,
-          DateTime: key.dateTime,
+          Username: userId,
+          DateTime: dateTime,
         },
       }),
     );

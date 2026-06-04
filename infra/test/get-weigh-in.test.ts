@@ -1,6 +1,7 @@
 import { handler } from '../lambda/get-weigh-in/index';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
+import type { Context } from 'aws-lambda';
+import { TEST_USER_SUB, withAuth } from './test-auth';
 
 jest.mock('@aws-sdk/lib-dynamodb', () => {
   const send = jest.fn();
@@ -19,14 +20,10 @@ const mockSend = (
 
 const context = {} as Context;
 
-function makeEvent(
-  username: string | undefined,
-  dateTime: string | undefined,
-): APIGatewayProxyEvent {
-  return {
-    queryStringParameters: username === undefined ? null : { Username: username },
+function makeEvent(dateTime: string | undefined) {
+  return withAuth({
     pathParameters: dateTime === undefined ? null : { dateTime },
-  } as APIGatewayProxyEvent;
+  });
 }
 
 describe('get-weigh-in handler', () => {
@@ -43,14 +40,14 @@ describe('get-weigh-in handler', () => {
 
   it('returns 200 with the weigh-in when found', async () => {
     const item = {
-      Username: 'mike',
+      Username: TEST_USER_SUB,
       DateTime: '2026-05-31T14:30:00.000Z',
       weight: 185.4,
     };
     mockSend.mockResolvedValueOnce({ Item: item });
 
     const result = await handler(
-      makeEvent('mike', '2026-05-31T14:30:00.000Z'),
+      makeEvent('2026-05-31T14:30:00.000Z'),
       context,
     );
 
@@ -59,7 +56,7 @@ describe('get-weigh-in handler', () => {
     expect(GetCommand).toHaveBeenCalledWith({
       TableName: 'WeighIns',
       Key: {
-        Username: 'mike',
+        Username: TEST_USER_SUB,
         DateTime: '2026-05-31T14:30:00.000Z',
       },
     });
@@ -69,20 +66,20 @@ describe('get-weigh-in handler', () => {
     mockSend.mockResolvedValueOnce({});
 
     const result = await handler(
-      makeEvent('mike', '2026-05-31T14:30:00.000Z'),
+      makeEvent('2026-05-31T14:30:00.000Z'),
       context,
     );
 
     expect(result.statusCode).toBe(404);
   });
 
-  it('returns 400 when Username is missing', async () => {
+  it('returns 401 without auth claims', async () => {
     const result = await handler(
-      makeEvent(undefined, '2026-05-31T14:30:00.000Z'),
+      { pathParameters: { dateTime: '2026-05-31T14:30:00.000Z' } } as never,
       context,
     );
 
-    expect(result.statusCode).toBe(400);
+    expect(result.statusCode).toBe(401);
     expect(mockSend).not.toHaveBeenCalled();
   });
 });

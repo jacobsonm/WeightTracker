@@ -1,6 +1,7 @@
 import { handler } from '../lambda/add-weigh-in/index';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import type { Context } from 'aws-lambda';
+import { TEST_USER_SUB, withAuth } from './test-auth';
 
 jest.mock('@aws-sdk/lib-dynamodb', () => {
   const send = jest.fn();
@@ -19,10 +20,10 @@ const mockSend = (
 
 const context = {} as Context;
 
-function makeEvent(body: unknown): APIGatewayProxyEvent {
-  return {
+function makeEvent(body: unknown) {
+  return withAuth({
     body: body === undefined ? null : JSON.stringify(body),
-  } as APIGatewayProxyEvent;
+  });
 }
 
 describe('add-weigh-in handler', () => {
@@ -38,9 +39,8 @@ describe('add-weigh-in handler', () => {
     process.env.TABLE_NAME = originalTableName;
   });
 
-  it('returns 201 and writes a valid weigh-in', async () => {
+  it('returns 201 and writes a valid weigh-in for the authenticated user', async () => {
     const payload = {
-      Username: 'mike',
       DateTime: '2026-05-31T14:30:00.000Z',
       weight: 185.4,
     };
@@ -48,18 +48,33 @@ describe('add-weigh-in handler', () => {
     const result = await handler(makeEvent(payload), context);
 
     expect(result.statusCode).toBe(201);
-    expect(JSON.parse(result.body!)).toEqual(payload);
+    expect(JSON.parse(result.body!)).toEqual({
+      Username: TEST_USER_SUB,
+      ...payload,
+    });
     expect(PutCommand).toHaveBeenCalledWith({
       TableName: 'WeighIns',
-      Item: payload,
+      Item: {
+        Username: TEST_USER_SUB,
+        ...payload,
+      },
     });
     expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 401 without auth claims', async () => {
+    const result = await handler(
+      { body: JSON.stringify({ DateTime: '2026-05-31T14:30:00.000Z', weight: 180 }) } as never,
+      context,
+    );
+
+    expect(result.statusCode).toBe(401);
+    expect(mockSend).not.toHaveBeenCalled();
   });
 
   it('returns 400 when DateTime format is invalid', async () => {
     const result = await handler(
       makeEvent({
-        Username: 'mike',
         DateTime: '2026-05-31',
         weight: 180,
       }),
@@ -72,17 +87,17 @@ describe('add-weigh-in handler', () => {
 
   it('parses a base64-encoded request body', async () => {
     const payload = {
-      Username: 'mike',
       DateTime: '2026-05-31T14:30:00.000Z',
       weight: 185.4,
     };
     const json = JSON.stringify(payload);
-    const event = {
-      body: Buffer.from(json, 'utf-8').toString('base64'),
-      isBase64Encoded: true,
-    } as APIGatewayProxyEvent;
-
-    const result = await handler(event, context);
+    const result = await handler(
+      withAuth({
+        body: Buffer.from(json, 'utf-8').toString('base64'),
+        isBase64Encoded: true,
+      }),
+      context,
+    );
 
     expect(result.statusCode).toBe(201);
     expect(mockSend).toHaveBeenCalledTimes(1);
@@ -91,7 +106,6 @@ describe('add-weigh-in handler', () => {
   it('returns 400 when weight is not positive', async () => {
     const result = await handler(
       makeEvent({
-        Username: 'mike',
         DateTime: '2026-05-31T14:30:00.000Z',
         weight: 0,
       }),

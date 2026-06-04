@@ -2,22 +2,27 @@
 
 Static single-page app for the Weight Tracker API.
 
+Authentication uses **Amazon Cognito** (Hosted UI). See [`../AUTH.md`](../AUTH.md) for creating users and auth configuration.
+
 ## Local development
 
 1. Copy `config.example.js` to `config.js` (or edit `config.js`).
-2. Set `apiBaseUrl` to your API Gateway base URL (include trailing slash), from `cdk deploy` output `ApiUrl`.
-3. Serve this folder with any static server, for example:
+2. Set `apiBaseUrl` and `auth` from `cdk deploy` outputs.
+3. Serve this folder:
 
    ```bash
    npx --yes serve .
    ```
 
 4. Open the URL shown (e.g. http://localhost:3000).
-
-CORS is enabled on the API for browser access.
+5. Sign in with a user created via Cognito admin (see AUTH.md).
 
 ## Deployed hosting
 
-The CDK stack uploads these files to S3 and serves them via CloudFront. The API URL is written into `config.js` automatically at deploy time.
+CDK uploads these files to S3 and serves them via CloudFront. `config.js` is generated at deploy time with API and Cognito settings.
 
-See the root [`DYNAMODB_SCHEMA.md`](../DYNAMODB_SCHEMA.md) for API details.
+Open the **`WebUrl`** output after deploy.
+
+## API details
+
+See [`../DYNAMODB_SCHEMA.md`](../DYNAMODB_SCHEMA.md).

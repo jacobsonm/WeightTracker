@@ -51,10 +51,14 @@ The storage mechanism for offline usage can be determined at a later time.
 
 Additional AWS services may prove useful but can be evaluated later.
 
-## Current Focus
+## Current state
 
-Start by building the DynamoDB database.
+The initial backend and web client are in place: DynamoDB weigh-ins, API Gateway + Lambda CRUD, and a static web UI on S3/CloudFront. See [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md).
+
+## Product roadmap
+
+Prioritized future work is tracked in **[`ROADMAP.md`](./ROADMAP.md)**. Items 1–3 are done; next is **#4** (progress summary dashboard), then unified CloudFront, dev/prod environments, and Android. See **[`AUTH.md`](./AUTH.md)** for sign-in and creating users.
 
 ## Notes
 
-This document is context only. Implementation details, technology choices beyond those listed above, and solutions are intentionally deferred until later phases.
+This document describes stable scope and architecture. Priorities, status, and implementation choices for upcoming work live in the roadmap.

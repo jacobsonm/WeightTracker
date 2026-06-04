@@ -1,3 +1,4 @@
+import { getAuthenticatedUserId } from '../shared/auth';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import type {
@@ -9,7 +10,6 @@ import type {
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 type WeighInPayload = {
-  Username: string;
   DateTime: string;
   weight: number;
 };
@@ -75,11 +75,7 @@ function parsePayload(
     return { error: 'Request body must be a JSON object' };
   }
 
-  const { Username, DateTime, weight } = parsed as Record<string, unknown>;
-
-  if (typeof Username !== 'string' || Username.trim() === '') {
-    return { error: 'Username is required and must be a non-empty string' };
-  }
+  const { DateTime, weight } = parsed as Record<string, unknown>;
 
   if (typeof DateTime !== 'string' || !ISO_8601_UTC_MS.test(DateTime)) {
     return {
@@ -93,7 +89,6 @@ function parsePayload(
   }
 
   return {
-    Username: Username.trim(),
     DateTime,
     weight,
   };
@@ -109,13 +104,18 @@ export async function handler(
     return jsonResponse(500, { error: 'Internal server error' });
   }
 
+  const userId = getAuthenticatedUserId(event);
+  if (typeof userId === 'object') {
+    return jsonResponse(401, { error: userId.error } satisfies ErrorBody);
+  }
+
   const payload = parsePayload(event);
   if ('error' in payload) {
     return jsonResponse(400, { error: payload.error } satisfies ErrorBody);
   }
 
   const item = {
-    Username: payload.Username,
+    Username: userId,
     DateTime: payload.DateTime,
     weight: payload.weight,
   };

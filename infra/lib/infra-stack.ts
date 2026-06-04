@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cdk from 'aws-cdk-lib/core';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -30,14 +31,29 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
-    new cdk.CfnOutput(this, 'WeighInsTableName', {
-      value: this.weighInsTable.tableName,
-      description: 'DynamoDB table name for weigh-in data',
-    });
-
-    new cdk.CfnOutput(this, 'WeighInsTableArn', {
-      value: this.weighInsTable.tableArn,
-      description: 'DynamoDB table ARN for weigh-in data',
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: 'WeightTrackerUsers',
+      selfSignUpEnabled: false,
+      signInAliases: {
+        username: true,
+        email: true,
+      },
+      autoVerify: { email: true },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+      },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: false,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     const addWeighInFunction = new NodejsFunction(this, 'AddWeighInFunction', {
@@ -100,61 +116,116 @@ export class InfraStack extends cdk.Stack {
 
     this.weighInsTable.grantWriteData(deleteWeighInFunction);
 
+    const userProfilesTable = new dynamodb.Table(this, 'UserProfilesTable', {
+      tableName: 'UserProfiles',
+      partitionKey: {
+        name: 'UserId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const getProfileFunction = new NodejsFunction(this, 'GetProfileFunction', {
+      entry: path.join(__dirname, '../lambda/get-profile/index.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      description: 'Gets the authenticated user profile',
+      bundling: { forceDockerBundling: false },
+      environment: {
+        PROFILE_TABLE_NAME: userProfilesTable.tableName,
+      },
+    });
+
+    userProfilesTable.grantReadData(getProfileFunction);
+
+    const putProfileFunction = new NodejsFunction(this, 'PutProfileFunction', {
+      entry: path.join(__dirname, '../lambda/put-profile/index.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      description: 'Creates or updates the authenticated user profile',
+      bundling: { forceDockerBundling: false },
+      environment: {
+        PROFILE_TABLE_NAME: userProfilesTable.tableName,
+      },
+    });
+
+    userProfilesTable.grantWriteData(putProfileFunction);
+
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(
+      this,
+      'WeighInAuthorizer',
+      {
+        cognitoUserPools: [userPool],
+      },
+    );
+
+    const corsResponseHeaders = {
+      'Access-Control-Allow-Origin': "'*'",
+      'Access-Control-Allow-Headers': "'Authorization,Content-Type'",
+      'Access-Control-Allow-Methods': "'DELETE,GET,POST,PUT,OPTIONS'",
+    };
+
     const api = new apigateway.RestApi(this, 'WeighInApi', {
       restApiName: 'WeightTrackerApi',
       description: 'Weight Tracker REST API',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: ['DELETE', 'GET', 'POST', 'OPTIONS'],
-        allowHeaders: ['Content-Type'],
+        allowMethods: ['DELETE', 'GET', 'POST', 'PUT', 'OPTIONS'],
+        allowHeaders: ['Authorization', 'Content-Type'],
       },
     });
+
+    api.addGatewayResponse('UnauthorizedWithCors', {
+      type: apigateway.ResponseType.UNAUTHORIZED,
+      responseHeaders: corsResponseHeaders,
+    });
+
+    api.addGatewayResponse('Default4xxWithCors', {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: corsResponseHeaders,
+    });
+
+    const authorizedMethodOptions: apigateway.MethodOptions = {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    };
 
     const weighInsResource = api.root.addResource('weigh-ins');
     weighInsResource.addMethod(
       'POST',
       new apigateway.LambdaIntegration(addWeighInFunction),
+      authorizedMethodOptions,
     );
     weighInsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(listWeighInsFunction),
+      authorizedMethodOptions,
     );
 
     const weighInByDateTime = weighInsResource.addResource('{dateTime}');
     weighInByDateTime.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getWeighInFunction),
+      authorizedMethodOptions,
     );
     weighInByDateTime.addMethod(
       'DELETE',
       new apigateway.LambdaIntegration(deleteWeighInFunction),
+      authorizedMethodOptions,
     );
 
-    new cdk.CfnOutput(this, 'AddWeighInFunctionName', {
-      value: addWeighInFunction.functionName,
-      description: 'Lambda function that adds a weigh-in record',
-    });
-
-    new cdk.CfnOutput(this, 'ListWeighInsFunctionName', {
-      value: listWeighInsFunction.functionName,
-      description: 'Lambda function that lists weigh-in records',
-    });
-
-    new cdk.CfnOutput(this, 'ApiUrl', {
-      value: api.url,
-      description: 'Base URL for the Weight Tracker API',
-    });
-
-    new cdk.CfnOutput(this, 'WeighInsEndpoint', {
-      value: `${api.url}weigh-ins`,
-      description: 'Weigh-ins collection (POST add, GET list)',
-    });
-
-    new cdk.CfnOutput(this, 'WeighInByDateTimeEndpoint', {
-      value: `${api.url}weigh-ins/{dateTime}`,
-      description:
-        'Single weigh-in (GET with Username query param, DELETE; URL-encode dateTime)',
-    });
+    const profileResource = api.root.addResource('profile');
+    profileResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(getProfileFunction),
+      authorizedMethodOptions,
+    );
+    profileResource.addMethod(
+      'PUT',
+      new apigateway.LambdaIntegration(putProfileFunction),
+      authorizedMethodOptions,
+    );
 
     const webBucket = new s3.Bucket(this, 'WebBucket', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -172,12 +243,58 @@ export class InfraStack extends cdk.Stack {
       comment: 'Weight Tracker web client',
     });
 
+    const webBaseUrl = `https://${webDistribution.distributionDomainName}`;
+    const authCallbackUrl = `${webBaseUrl}/auth/callback.html`;
+    const localDevOrigin = 'http://localhost:3000';
+
+    const cognitoDomainPrefix = `weighttracker-${this.account}`;
+    const cognitoHostedUiDomain = `${cognitoDomainPrefix}.auth.${this.region}.amazoncognito.com`;
+
+    const userPoolDomain = userPool.addDomain('UserPoolDomain', {
+      cognitoDomain: {
+        domainPrefix: cognitoDomainPrefix,
+      },
+    });
+
+    const userPoolClient = userPool.addClient('WebClient', {
+      userPoolClientName: 'WeightTrackerWeb',
+      generateSecret: false,
+      authFlows: {
+        userPassword: true,
+        userSrp: true,
+      },
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        scopes: [
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.PROFILE,
+        ],
+        callbackUrls: [authCallbackUrl, `${localDevOrigin}/auth/callback.html`],
+        logoutUrls: [webBaseUrl, `${localDevOrigin}/`],
+      },
+    });
+
+    const appConfig = {
+      apiBaseUrl: api.url,
+      auth: {
+        region: this.region,
+        userPoolId: userPool.userPoolId,
+        clientId: userPoolClient.userPoolClientId,
+        cognitoDomain: cognitoHostedUiDomain,
+        redirectUri: authCallbackUrl,
+        logoutUri: webBaseUrl,
+      },
+    };
+
     new s3deploy.BucketDeployment(this, 'DeployWeb', {
       sources: [
         s3deploy.Source.asset(path.join(__dirname, '../../web')),
         s3deploy.Source.data(
           '/config.js',
-          `window.APP_CONFIG = ${JSON.stringify({ apiBaseUrl: api.url })};`,
+          `window.APP_CONFIG = ${JSON.stringify(appConfig, null, 2)};`,
         ),
       ],
       destinationBucket: webBucket,
@@ -185,13 +302,48 @@ export class InfraStack extends cdk.Stack {
       distributionPaths: ['/*'],
     });
 
-    new cdk.CfnOutput(this, 'WebBucketName', {
-      value: webBucket.bucketName,
-      description: 'S3 bucket for web client assets',
+    new cdk.CfnOutput(this, 'WeighInsTableName', {
+      value: this.weighInsTable.tableName,
+      description: 'DynamoDB table name for weigh-in data',
+    });
+
+    new cdk.CfnOutput(this, 'UserProfilesTableName', {
+      value: userProfilesTable.tableName,
+      description: 'DynamoDB table name for user profiles',
+    });
+
+    new cdk.CfnOutput(this, 'ProfileEndpoint', {
+      value: `${api.url}profile`,
+      description: 'User profile (GET, PUT; requires JWT)',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: userPool.userPoolId,
+      description: 'Cognito User Pool ID',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      description: 'Cognito app client ID for the web app',
+    });
+
+    new cdk.CfnOutput(this, 'CognitoDomain', {
+      value: cognitoHostedUiDomain,
+      description: 'Cognito Hosted UI hostname (without https://)',
+    });
+
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: api.url,
+      description: 'Base URL for the Weight Tracker API',
+    });
+
+    new cdk.CfnOutput(this, 'WeighInsEndpoint', {
+      value: `${api.url}weigh-ins`,
+      description: 'Weigh-ins collection (POST add, GET list; requires JWT)',
     });
 
     new cdk.CfnOutput(this, 'WebUrl', {
-      value: `https://${webDistribution.distributionDomainName}`,
+      value: webBaseUrl,
       description: 'HTTPS URL for the web client (CloudFront)',
     });
   }

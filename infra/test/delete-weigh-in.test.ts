@@ -1,6 +1,7 @@
 import { handler } from '../lambda/delete-weigh-in/index';
-import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import { DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import type { Context } from 'aws-lambda';
+import { TEST_USER_SUB, withAuth } from './test-auth';
 
 jest.mock('@aws-sdk/lib-dynamodb', () => {
   const send = jest.fn();
@@ -19,14 +20,10 @@ const mockSend = (
 
 const context = {} as Context;
 
-function makeEvent(
-  username: string | undefined,
-  dateTime: string | undefined,
-): APIGatewayProxyEvent {
-  return {
-    queryStringParameters: username === undefined ? null : { Username: username },
+function makeEvent(dateTime: string | undefined) {
+  return withAuth({
     pathParameters: dateTime === undefined ? null : { dateTime },
-  } as APIGatewayProxyEvent;
+  });
 }
 
 describe('delete-weigh-in handler', () => {
@@ -44,14 +41,14 @@ describe('delete-weigh-in handler', () => {
   it('returns 204 when a weigh-in is deleted', async () => {
     mockSend.mockResolvedValueOnce({
       Attributes: {
-        Username: 'mike',
+        Username: TEST_USER_SUB,
         DateTime: '2026-05-31T14:30:00.000Z',
         weight: 185.4,
       },
     });
 
     const result = await handler(
-      makeEvent('mike', '2026-05-31T14:30:00.000Z'),
+      makeEvent('2026-05-31T14:30:00.000Z'),
       context,
     );
 
@@ -60,7 +57,7 @@ describe('delete-weigh-in handler', () => {
     expect(DeleteCommand).toHaveBeenCalledWith({
       TableName: 'WeighIns',
       Key: {
-        Username: 'mike',
+        Username: TEST_USER_SUB,
         DateTime: '2026-05-31T14:30:00.000Z',
       },
       ReturnValues: 'ALL_OLD',
@@ -71,17 +68,20 @@ describe('delete-weigh-in handler', () => {
     mockSend.mockResolvedValueOnce({});
 
     const result = await handler(
-      makeEvent('mike', '2026-05-31T14:30:00.000Z'),
+      makeEvent('2026-05-31T14:30:00.000Z'),
       context,
     );
 
     expect(result.statusCode).toBe(404);
   });
 
-  it('returns 400 when DateTime path parameter is missing', async () => {
-    const result = await handler(makeEvent('mike', undefined), context);
+  it('returns 401 without auth claims', async () => {
+    const result = await handler(
+      { pathParameters: { dateTime: '2026-05-31T14:30:00.000Z' } } as never,
+      context,
+    );
 
-    expect(result.statusCode).toBe(400);
+    expect(result.statusCode).toBe(401);
     expect(mockSend).not.toHaveBeenCalled();
   });
 });

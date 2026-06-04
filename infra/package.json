@@ -5,7 +5,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "migrate-weigh-ins": "node scripts/migrate-weigh-ins.mjs"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.160",

@@ -1,3 +1,4 @@
+import { getAuthenticatedUserId } from '../shared/auth';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -68,14 +69,9 @@ function parseDateTimeParam(
 function parseQuery(
   event: APIGatewayProxyEvent,
 ):
-  | { username: string; startDateTime?: string; endDateTime?: string }
+  | { startDateTime?: string; endDateTime?: string }
   | { error: string } {
   const params = event.queryStringParameters ?? {};
-  const username = params.Username?.trim();
-
-  if (!username) {
-    return { error: 'Username query parameter is required' };
-  }
 
   const startResult = parseDateTimeParam(
     params.startDateTime,
@@ -99,7 +95,7 @@ function parseQuery(
     };
   }
 
-  return { username, startDateTime, endDateTime };
+  return { startDateTime, endDateTime };
 }
 
 const ATTR_NAMES = {
@@ -213,6 +209,11 @@ export async function handler(
     return jsonResponse(500, { error: 'Internal server error' });
   }
 
+  const userId = getAuthenticatedUserId(event);
+  if (typeof userId === 'object') {
+    return jsonResponse(401, { error: userId.error } satisfies ErrorBody);
+  }
+
   const parsed = parseQuery(event);
   if ('error' in parsed) {
     return jsonResponse(400, { error: parsed.error } satisfies ErrorBody);
@@ -221,7 +222,7 @@ export async function handler(
   try {
     const weighIns = await queryAllWeighIns(
       tableName,
-      parsed.username,
+      userId,
       parsed.startDateTime,
       parsed.endDateTime,
     );
