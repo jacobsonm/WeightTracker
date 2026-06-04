@@ -29,8 +29,68 @@ body {
   padding: 2rem 1rem 3rem;
 }
 
-header {
-  margin-bottom: 1.5rem;
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.header-brand {
+  flex: 1 1 200px;
+}
+
+.header-auth {
+  flex: 0 1 auto;
+}
+
+.auth-user {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.main-nav {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.nav-btn {
+  flex: 1;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  color: var(--text);
+  background: #eef6f4;
+}
+
+.nav-btn[aria-selected='true'] {
+  color: #fff;
+  background: var(--accent);
+}
+
+.nav-btn[aria-selected='true']:hover {
+  background: var(--accent-hover);
+}
+
+.app-view .card:last-child {
+  margin-bottom: 0;
 }
 
 h1 {
@@ -185,8 +245,16 @@ select {
 
 .status {
   min-height: 1.25rem;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   font-size: 0.9rem;
+}
+
+#signed-out-hint {
+  margin-bottom: 1rem;
+}
+
+#signed-out-hint.hidden {
+  display: none;
 }
 
 .status.error {

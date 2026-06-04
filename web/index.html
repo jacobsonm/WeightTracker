@@ -9,160 +9,229 @@
   </head>
   <body>
     <div class="app">
-      <header>
-        <h1>Weight Tracker</h1>
-        <p class="subtitle">Track weigh-ins in pounds (lbs)</p>
+      <header class="site-header">
+        <div class="header-brand">
+          <h1>Weight Tracker</h1>
+          <p class="subtitle">Track weigh-ins in pounds (lbs)</p>
+        </div>
+        <div class="header-auth">
+          <div id="signed-out" class="auth-panel">
+            <button type="button" id="sign-in-btn" class="btn primary">
+              Sign in
+            </button>
+          </div>
+          <div id="signed-in" class="auth-panel hidden">
+            <span class="auth-user"
+              >Signed in as <strong id="user-label"></strong
+            ></span>
+            <button type="button" id="sign-out-btn" class="btn">Sign out</button>
+          </div>
+        </div>
       </header>
 
-      <section class="card" aria-labelledby="auth-heading">
-        <h2 id="auth-heading">Account</h2>
-        <div id="signed-out" class="auth-panel">
-          <p class="hint">Sign in with your Cognito account to view and manage weigh-ins.</p>
-          <button type="button" id="sign-in-btn" class="btn primary">Sign in</button>
-        </div>
-        <div id="signed-in" class="auth-panel hidden">
-          <p>Signed in as <strong id="user-label"></strong></p>
-          <button type="button" id="sign-out-btn" class="btn">Sign out</button>
-        </div>
-      </section>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
 
-      <div id="app-content" class="hidden">
-        <section class="card" aria-labelledby="profile-heading">
-          <h2 id="profile-heading">Profile</h2>
-          <form id="profile-form">
-            <div class="field-row">
-              <label for="profile-username">Display name</label>
-              <input
-                id="profile-username"
-                type="text"
-                required
-                placeholder="e.g. mike"
-              />
-            </div>
-            <div class="field-row">
-              <label for="profile-birthdate">Birthdate</label>
-              <input id="profile-birthdate" type="date" required />
-            </div>
-            <div class="field-row">
-              <label for="profile-sex">Sex</label>
-              <select id="profile-sex" required>
-                <option value="">Select…</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="field-row">
-              <label for="profile-height">Height (inches)</label>
-              <input
-                id="profile-height"
-                type="number"
-                step="0.1"
-                min="36"
-                max="96"
-                required
-                placeholder="70"
-              />
-            </div>
-            <div class="field-row">
-              <label for="profile-timezone">Timezone</label>
-              <input
-                id="profile-timezone"
-                type="text"
-                required
-                list="timezone-list"
-                placeholder="America/New_York"
-                autocomplete="off"
-              />
-              <datalist id="timezone-list"></datalist>
-            </div>
-            <p id="ideal-weight-display" class="hint ideal-estimate hidden"></p>
-            <div class="field-row">
-              <label for="profile-target">Target weight (lbs)</label>
-              <input
-                id="profile-target"
-                type="number"
-                step="0.1"
-                min="50"
-                max="600"
-                placeholder="Optional"
-              />
-            </div>
-            <div class="goals-section">
-              <div class="goals-header">
-                <span class="goals-label">Intermediate goals (lbs)</span>
-                <button type="button" id="add-goal-btn" class="btn">Add goal</button>
-              </div>
-              <div id="intermediate-goals-list"></div>
-            </div>
-            <button type="submit" class="btn primary">Save profile</button>
-          </form>
-          <p class="hint">
-            Ideal weight is estimated from height and sex (Devine formula). Goals appear as lines on the chart.
-          </p>
-        </section>
-
-        <section class="card" aria-labelledby="add-heading">
-          <h2 id="add-heading">Add weigh-in</h2>
-          <form id="weigh-in-form">
-            <div class="field-row">
-              <label for="weight">Weight (lbs)</label>
-              <input
-                id="weight"
-                type="number"
-                step="0.1"
-                min="0.1"
-                required
-                placeholder="185.4"
-              />
-            </div>
-            <div class="field-row">
-              <label for="datetime">Date &amp; time</label>
-              <input id="datetime" type="datetime-local" required />
-            </div>
-            <button type="submit" class="btn primary">Save weigh-in</button>
-          </form>
-          <p class="hint">
-            Date and time use your profile timezone. Saving again with the same
-            date and time updates that entry.
-          </p>
-        </section>
-
-        <section class="card" aria-labelledby="progress-heading">
-          <h2 id="progress-heading">Progress</h2>
-          <div id="progress-summary" class="progress-grid hidden"></div>
-          <p id="progress-empty" class="hint">
-            Add a weigh-in to see your progress.
-          </p>
-        </section>
-
-        <section class="card" aria-labelledby="chart-heading">
-          <h2 id="chart-heading">Trend</h2>
-          <div class="chart-wrap">
-            <canvas id="weight-chart" aria-label="Weight over time line chart"></canvas>
-          </div>
-          <p id="chart-empty" class="hint hidden">No data to chart yet.</p>
-        </section>
-
-        <section class="card" aria-labelledby="history-heading">
-          <h2 id="history-heading">History</h2>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Date &amp; time</th>
-                  <th scope="col">Weight (lbs)</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="history-body"></tbody>
-            </table>
-          </div>
-          <p id="history-empty" class="hint hidden">No weigh-ins yet.</p>
-        </section>
+      <div id="signed-out-hint" class="card">
+        <p class="hint">
+          Sign in with your Cognito account to view and manage weigh-ins.
+        </p>
       </div>
 
-      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <div id="app-content" class="hidden">
+        <nav class="main-nav" aria-label="Main">
+          <button
+            type="button"
+            class="nav-btn"
+            data-view="home"
+            role="tab"
+            aria-selected="true"
+            aria-controls="view-home"
+            id="nav-home"
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            class="nav-btn"
+            data-view="profile"
+            role="tab"
+            aria-selected="false"
+            aria-controls="view-profile"
+            id="nav-profile"
+          >
+            Profile
+          </button>
+          <button
+            type="button"
+            class="nav-btn"
+            data-view="history"
+            role="tab"
+            aria-selected="false"
+            aria-controls="view-history"
+            id="nav-history"
+          >
+            History
+          </button>
+        </nav>
+
+        <div id="view-home" class="app-view" role="tabpanel" aria-labelledby="nav-home">
+          <section class="card" aria-labelledby="add-heading">
+            <h2 id="add-heading">Add weigh-in</h2>
+            <form id="weigh-in-form">
+              <div class="field-row">
+                <label for="weight">Weight (lbs)</label>
+                <input
+                  id="weight"
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  required
+                  placeholder="185.4"
+                />
+              </div>
+              <div class="field-row">
+                <label for="datetime">Date &amp; time</label>
+                <input id="datetime" type="datetime-local" required />
+              </div>
+              <button type="submit" class="btn primary">Save weigh-in</button>
+            </form>
+            <p class="hint">
+              Date and time use your profile timezone. Saving again with the same
+              date and time updates that entry.
+            </p>
+          </section>
+
+          <section class="card" aria-labelledby="progress-heading">
+            <h2 id="progress-heading">Progress</h2>
+            <div id="progress-summary" class="progress-grid hidden"></div>
+            <p id="progress-empty" class="hint">
+              Add a weigh-in to see your progress.
+            </p>
+          </section>
+        </div>
+
+        <div
+          id="view-profile"
+          class="app-view hidden"
+          role="tabpanel"
+          aria-labelledby="nav-profile"
+          hidden
+        >
+          <section class="card" aria-labelledby="profile-heading">
+            <h2 id="profile-heading">Profile</h2>
+            <form id="profile-form">
+              <div class="field-row">
+                <label for="profile-username">Display name</label>
+                <input
+                  id="profile-username"
+                  type="text"
+                  required
+                  placeholder="e.g. mike"
+                />
+              </div>
+              <div class="field-row">
+                <label for="profile-birthdate">Birthdate</label>
+                <input id="profile-birthdate" type="date" required />
+              </div>
+              <div class="field-row">
+                <label for="profile-sex">Sex</label>
+                <select id="profile-sex" required>
+                  <option value="">Select…</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <label for="profile-height">Height (inches)</label>
+                <input
+                  id="profile-height"
+                  type="number"
+                  step="0.1"
+                  min="36"
+                  max="96"
+                  required
+                  placeholder="70"
+                />
+              </div>
+              <div class="field-row">
+                <label for="profile-timezone">Timezone</label>
+                <input
+                  id="profile-timezone"
+                  type="text"
+                  required
+                  list="timezone-list"
+                  placeholder="America/New_York"
+                  autocomplete="off"
+                />
+                <datalist id="timezone-list"></datalist>
+              </div>
+              <p id="ideal-weight-display" class="hint ideal-estimate hidden"></p>
+              <div class="field-row">
+                <label for="profile-target">Target weight (lbs)</label>
+                <input
+                  id="profile-target"
+                  type="number"
+                  step="0.1"
+                  min="50"
+                  max="600"
+                  placeholder="Optional"
+                />
+              </div>
+              <div class="goals-section">
+                <div class="goals-header">
+                  <span class="goals-label">Intermediate goals (lbs)</span>
+                  <button type="button" id="add-goal-btn" class="btn">
+                    Add goal
+                  </button>
+                </div>
+                <div id="intermediate-goals-list"></div>
+              </div>
+              <button type="submit" class="btn primary">Save profile</button>
+            </form>
+            <p class="hint">
+              Ideal weight is estimated from height and sex (Devine formula).
+              Goals appear as lines on the chart in History.
+            </p>
+          </section>
+        </div>
+
+        <div
+          id="view-history"
+          class="app-view hidden"
+          role="tabpanel"
+          aria-labelledby="nav-history"
+          hidden
+        >
+          <section class="card" aria-labelledby="chart-heading">
+            <h2 id="chart-heading">Trend</h2>
+            <div class="chart-wrap">
+              <canvas
+                id="weight-chart"
+                aria-label="Weight over time line chart"
+              ></canvas>
+            </div>
+            <p id="chart-empty" class="hint hidden">No data to chart yet.</p>
+          </section>
+
+          <section class="card" aria-labelledby="history-table-heading">
+            <h2 id="history-table-heading">Weigh-ins</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Date &amp; time</th>
+                    <th scope="col">Weight (lbs)</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+              </table>
+            </div>
+            <p id="history-empty" class="hint hidden">No weigh-ins yet.</p>
+          </section>
+        </div>
+      </div>
     </div>
 
     <script src="config.js"></script>

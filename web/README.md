@@ -25,7 +25,10 @@ Open the **`WebUrl`** output after deploy.
 
 ## Features
 
-- Profile, weigh-ins, trend chart, and **progress summary** (computed in the browser from weigh-ins + profile; see `progress.js`).
+- **Home** — add weigh-in form and progress summary
+- **History** — trend chart and weigh-in table
+- **Profile** — goals, target weight, timezone, and related fields
+- Progress metrics computed in the browser (`progress.js`)
 
 ## API details
 

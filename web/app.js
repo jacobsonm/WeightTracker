@@ -26,14 +26,23 @@ const els = {
   chartEmpty: document.getElementById('chart-empty'),
   progressSummary: document.getElementById('progress-summary'),
   progressEmpty: document.getElementById('progress-empty'),
+  signedOutHint: document.getElementById('signed-out-hint'),
+  navButtons: document.querySelectorAll('.nav-btn'),
+  views: {
+    home: document.getElementById('view-home'),
+    profile: document.getElementById('view-profile'),
+    history: document.getElementById('view-history'),
+  },
 };
 
 const auth = window.WeightTrackerAuth;
 const dt = window.WeightTrackerDateTime;
 const progress = window.WeightTrackerProgress;
+const VIEW_NAMES = ['home', 'profile', 'history'];
 let chart;
 let loadedProfile = null;
 let chartWeighIns = [];
+let currentView = 'home';
 
 function getApiBaseUrl() {
   const base = window.APP_CONFIG?.apiBaseUrl;
@@ -62,14 +71,66 @@ function toApiDateTime(datetimeLocalValue) {
   return dt.datetimeLocalToUtcIso(datetimeLocalValue, getDisplayTimezone());
 }
 
+function showView(name) {
+  if (!VIEW_NAMES.includes(name)) {
+    return;
+  }
+
+  currentView = name;
+
+  for (const viewName of VIEW_NAMES) {
+    const panel = els.views[viewName];
+    const isActive = viewName === name;
+    panel.classList.toggle('hidden', !isActive);
+    panel.hidden = !isActive;
+
+    const navBtn = document.querySelector(`.nav-btn[data-view="${viewName}"]`);
+    if (navBtn) {
+      navBtn.setAttribute('aria-selected', String(isActive));
+    }
+  }
+
+  if (name === 'history' && chart) {
+    requestAnimationFrame(() => chart.resize());
+  }
+
+  if (location.hash !== `#${name}`) {
+    history.replaceState(null, '', `#${name}`);
+  }
+}
+
+function initNavigation() {
+  for (const btn of els.navButtons) {
+    btn.addEventListener('click', () => showView(btn.dataset.view));
+  }
+
+  const hash = location.hash.replace(/^#/, '');
+  if (VIEW_NAMES.includes(hash)) {
+    showView(hash);
+  } else {
+    showView('home');
+  }
+
+  window.addEventListener('hashchange', () => {
+    const next = location.hash.replace(/^#/, '');
+    if (VIEW_NAMES.includes(next) && next !== currentView) {
+      showView(next);
+    }
+  });
+}
+
 function updateAuthUi() {
   const signedIn = auth.isAuthenticated();
   els.signedOut.classList.toggle('hidden', signedIn);
   els.signedIn.classList.toggle('hidden', !signedIn);
+  els.signedOutHint.classList.toggle('hidden', signedIn);
   els.appContent.classList.toggle('hidden', !signedIn);
 
   if (signedIn) {
     els.userLabel.textContent = auth.getUserDisplayName();
+    showView(currentView && VIEW_NAMES.includes(currentView) ? currentView : 'home');
+  } else {
+    history.replaceState(null, '', location.pathname);
   }
 }
 
@@ -254,6 +315,7 @@ async function onProfileSubmit(event) {
     const profile = await saveProfile(buildProfilePayload());
     applyLoadedProfile(profile);
     await refreshHistory();
+    showView('home');
     setStatus('Profile saved.', 'success');
   } catch (err) {
     setStatus(err.message, 'error');
@@ -556,6 +618,7 @@ async function onDelete(entry) {
 
 function init() {
   dt.populateTimezoneDatalist(els.timezoneList);
+  initNavigation();
   updateAuthUi();
   setDefaultDateTime();
 
