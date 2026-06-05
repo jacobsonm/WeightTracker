@@ -57,7 +57,7 @@ The initial backend and web client are in place: DynamoDB weigh-ins, API Gateway
 
 ## Product roadmap
 
-Prioritized future work is tracked in **[`ROADMAP.md`](./ROADMAP.md)**. Items 1–5 are done; next is **#6** (unified CloudFront for web + API), then dev/prod environments, and Android. See **[`AUTH.md`](./AUTH.md)** for sign-in and creating users.
+Prioritized future work is tracked in **[`ROADMAP.md`](./ROADMAP.md)**. Items 1–6 are done; next is **#7** (dev/prod environments), then Android (#8). See **[`AUTH.md`](./AUTH.md)** for sign-in and creating users.
 
 ## Notes
 

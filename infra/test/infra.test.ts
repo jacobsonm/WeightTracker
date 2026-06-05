@@ -63,8 +63,18 @@ test('WeighIns DynamoDB table is created with expected keys', () => {
   });
 
   template.hasResourceProperties('AWS::CloudFront::Distribution', {
-    DistributionConfig: {
+    DistributionConfig: Match.objectLike({
       DefaultRootObject: 'index.html',
-    },
+      CacheBehaviors: Match.arrayWith([
+        Match.objectLike({
+          PathPattern: '/api/*',
+        }),
+      ]),
+    }),
+  });
+
+  template.resourceCountIs('AWS::CloudFront::Function', 1);
+  template.hasResourceProperties('AWS::CloudFront::Function', {
+    FunctionCode: Match.stringLikeRegexp('uri.indexOf\\(\'/api/\'\\)'),
   });
 });

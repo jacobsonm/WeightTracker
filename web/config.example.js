@@ -1,4 +1,8 @@
 // Copy to config.js for local development, or let CDK inject config.js on deploy.
+//
+// Deployed CloudFront site uses a same-origin relative path (/api/).
+// For local serve (npx serve), use the direct API Gateway URL from cdk deploy
+// (output ApiGatewayUrl), not the CloudFront /api/ path.
 window.APP_CONFIG = {
   apiBaseUrl: 'https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com/prod/',
   auth: {

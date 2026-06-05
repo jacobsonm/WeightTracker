@@ -60,8 +60,9 @@ aws cognito-idp admin-create-user `
 ## Local development
 
 1. Copy [`web/config.example.js`](./web/config.example.js) to `web/config.js`.
-2. Fill in `apiBaseUrl` and `auth` from CDK outputs.
-3. Set `redirectUri` and `logoutUri` to `http://localhost:3000/...`.
+2. Set `apiBaseUrl` to the **`ApiGatewayUrl`** output (direct API Gateway URL, not CloudFront `/api/`).
+3. Fill in remaining `auth` fields from CDK outputs.
+4. Set `redirectUri` and `logoutUri` to `http://localhost:3000/...`.
 4. Add `http://localhost:3000/auth/callback.html` to the Cognito app client callback URLs if you change ports (already included for port 3000 in CDK).
 5. Serve the `web/` folder: `npx serve web`
 6. Create a user in the pool as above.

@@ -125,7 +125,11 @@ One profile per authenticated user (Cognito `sub`).
 
 REST API: **WeightTrackerApi** (API Gateway). **All endpoints require** `Authorization: Bearer <id_token>` (Cognito ID token).
 
-After deploy, CDK outputs `ApiUrl`, `ProfileEndpoint`, `WeighInsEndpoint`, and `WebUrl`.
+**Public URL (web and future mobile via CloudFront):** `{WebUrl}/api/...` — e.g. `{WebUrl}/api/weigh-ins`, `{WebUrl}/api/profile`. CloudFront rewrites `/api/*` to the API Gateway stage.
+
+**Local development:** use the **`ApiGatewayUrl`** CDK output (direct `execute-api` hostname) in `web/config.js`.
+
+After deploy, CDK outputs `WebUrl`, `ApiUrl` (CloudFront `/api/`), `ApiGatewayUrl` (direct, for local dev), `ProfileEndpoint`, and `WeighInsEndpoint`.
 
 ### User profile
 

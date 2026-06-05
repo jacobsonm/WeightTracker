@@ -46,10 +46,15 @@ let currentView = 'home';
 
 function getApiBaseUrl() {
   const base = window.APP_CONFIG?.apiBaseUrl;
-  if (!base) {
+  if (base === undefined || base === null || base === '') {
     throw new Error(
       'API URL is not configured. Deploy with CDK or set apiBaseUrl in config.js.',
     );
+  }
+  if (base.startsWith('/')) {
+    const origin = window.location.origin.replace(/\/$/, '');
+    const path = base.startsWith('/') ? base : `/${base}`;
+    return `${origin}${path.endsWith('/') ? path : `${path}/`}`;
   }
   return base.endsWith('/') ? base : `${base}/`;
 }

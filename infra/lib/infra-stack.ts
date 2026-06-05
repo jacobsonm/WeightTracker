@@ -234,16 +234,54 @@ export class InfraStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    const apiStageName = api.deploymentStage.stageName;
+    const apiOriginDomain = `${api.restApiId}.execute-api.${this.region}.amazonaws.com`;
+
+    const apiPathRewrite = new cloudfront.Function(this, 'ApiPathRewrite', {
+      code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+  if (uri.indexOf('/api/') === 0) {
+    request.uri = uri.substring(4);
+  } else if (uri === '/api') {
+    request.uri = '/';
+  }
+  return request;
+}
+`.trim()),
+    });
+
+    const apiOrigin = new origins.HttpOrigin(apiOriginDomain, {
+      originPath: `/${apiStageName}`,
+      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+    });
+
     const webDistribution = new cloudfront.Distribution(this, 'WebDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       defaultRootObject: 'index.html',
-      comment: 'Weight Tracker web client',
+      comment: 'Weight Tracker web client and /api proxy',
+    });
+
+    webDistribution.addBehavior('/api/*', apiOrigin, {
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+      cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      originRequestPolicy:
+        cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      functionAssociations: [
+        {
+          function: apiPathRewrite,
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+        },
+      ],
     });
 
     const webBaseUrl = `https://${webDistribution.distributionDomainName}`;
+    const apiBaseUrl = `${webBaseUrl}/api/`;
     const authCallbackUrl = `${webBaseUrl}/auth/callback.html`;
     const localDevOrigin = 'http://localhost:3000';
 
@@ -278,7 +316,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     const appConfig = {
-      apiBaseUrl: api.url,
+      apiBaseUrl: '/api/',
       auth: {
         region: this.region,
         userPoolId: userPool.userPoolId,
@@ -313,8 +351,8 @@ export class InfraStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'ProfileEndpoint', {
-      value: `${api.url}profile`,
-      description: 'User profile (GET, PUT; requires JWT)',
+      value: `${apiBaseUrl}profile`,
+      description: 'User profile via CloudFront (GET, PUT; requires JWT)',
     });
 
     new cdk.CfnOutput(this, 'UserPoolId', {
@@ -333,13 +371,19 @@ export class InfraStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'ApiUrl', {
+      value: apiBaseUrl,
+      description: 'Public API base URL on CloudFront (/api/* → API Gateway)',
+    });
+
+    new cdk.CfnOutput(this, 'ApiGatewayUrl', {
       value: api.url,
-      description: 'Base URL for the Weight Tracker API',
+      description:
+        'Direct API Gateway URL (local dev config.js only; browser uses /api/ on WebUrl)',
     });
 
     new cdk.CfnOutput(this, 'WeighInsEndpoint', {
-      value: `${api.url}weigh-ins`,
-      description: 'Weigh-ins collection (POST add, GET list; requires JWT)',
+      value: `${apiBaseUrl}weigh-ins`,
+      description: 'Weigh-ins via CloudFront (POST add, GET list; requires JWT)',
     });
 
     new cdk.CfnOutput(this, 'WebUrl', {

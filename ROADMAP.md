@@ -146,21 +146,21 @@ Web UI (`web/`), possibly goals API from #3, [`DYNAMODB_SCHEMA.md`](./DYNAMODB_S
 
 | | |
 |---|---|
-| **Priority** | 6 (next) |
-| **Status** | planned |
+| **Priority** | 6 |
+| **Status** | done |
 | **Scope** | One CloudFront URL serves the static web app and proxies API traffic (no separate API Gateway URL in the browser). |
+
+**Decisions**
+- Public API path: **`/api/*`** on the CloudFront hostname (Option B).
+- CloudFront **viewer-request function** strips `/api` and forwards to API Gateway stage path (e.g. `/prod/weigh-ins`).
+- Deployed `config.js` sets `apiBaseUrl: '/api/'` (same-origin); **local dev** still uses direct **`ApiGatewayUrl`** output in `config.js`.
+- **Custom domain** deferred; same `/api/` pattern works when a domain is added later.
 
 **Why**  
 Today the web app on CloudFront calls API Gateway on a different hostname (CORS + two URLs in `config.js`). A single origin simplifies the client and matches a production-style setup.
 
 **Likely direction**  
-- CloudFront distribution with two behaviors: default → S3 (web); `/prod/*` or `/api/*` → API Gateway origin.  
-- Update `config.js` / `app.js` to use relative API paths or same-origin base URL.  
-- Cognito callback URLs and CORS may need updates for the unified domain.
-
-**Open questions**  
-- Path pattern for API (`/api/...` vs stage prefix `/prod/...`)?  
-- Custom domain (Route 53 + ACM) now or later?
+- CloudFront: default → S3 (web); `/api/*` → API Gateway with path rewrite (implemented).
 
 **Touches**  
 CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH.md) callback URLs.
@@ -171,7 +171,7 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 
 | | |
 |---|---|
-| **Priority** | 7 |
+| **Priority** | 7 (next) |
 | **Status** | planned |
 | **Scope** | Isolated **dev** and **prod** stacks (or accounts), each with its own Cognito pool, DynamoDB tables, API, and CloudFront site. |
 
@@ -211,7 +211,7 @@ CDK app entry, stack props, docs, possibly GitHub Actions (future).
 - Technology TBD (Kotlin/Jetpack Compose is a common default).
 
 **Depends on**  
-Stable API and auth (#1); profile (#2) optional at v1; #6 (single hostname) may simplify base URL configuration.
+Stable API and auth (#1); profile (#2) optional at v1; unified **`/api/`** on CloudFront (#6) for base URL configuration.
 
 **Open questions**  
 - Minimum v1 feature set vs parity with web?  
@@ -269,6 +269,7 @@ Milestones already in place:
 - Target weight, intermediate goals, ideal weight estimate, chart goal lines
 - Web progress summary (starting/current weight, change since first weigh-in, goal and target %)
 - Web layout: Home / Profile / History navigation; sign-in in header
+- Single CloudFront hostname: web + `/api/*` API proxy
 
 See [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md) and [`web/README.md`](./web/README.md).
 
@@ -300,6 +301,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-05-31 | Added #5 web layout/navigation; renumbered CloudFront, envs, Android, IBW |
 | 2026-06-04 | #4 done: web progress summary (`web/progress.js`) |
 | 2026-06-04 | #5 done: Home / Profile / History nav and view layout |
+| 2026-06-04 | #6 done: CloudFront `/api/*` proxy; relative apiBaseUrl on deploy |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |
