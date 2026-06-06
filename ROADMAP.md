@@ -172,7 +172,7 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 | | |
 |---|---|
 | **Priority** | 7 (next) |
-| **Status** | planned |
+| **Status** | in progress |
 | **Scope** | Native **Android** client: sign in, record weigh-ins, view history/chart, sync with existing API. |
 
 **Why**  

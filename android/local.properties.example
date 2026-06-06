@@ -1,0 +1,14 @@
+# Copy to local.properties and fill in from: cd infra && npx cdk deploy
+#
+# Android Studio normally creates local.properties with sdk.dir when you open the project.
+# If Run fails with "SDK location not found", add this line (use forward slashes):
+# sdk.dir=C\:/Users/YOUR_USER/AppData/Local/Android/Sdk
+#
+# API_BASE_URL = ApiUrl output (must end with /). Do NOT use example.com or WebUrl alone.
+# Wrong base URL often shows as HTTP 405 on POST.
+# Example: https://d111111.cloudfront.net/api/
+
+API_BASE_URL=https://YOUR_CLOUDFRONT_HOST/cloudfront.net/api/
+COGNITO_REGION=us-west-2
+COGNITO_DOMAIN=weighttracker-123456789.auth.us-west-2.amazoncognito.com
+COGNITO_CLIENT_ID=your-android-user-pool-client-id
