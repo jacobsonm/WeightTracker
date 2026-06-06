@@ -22,7 +22,23 @@ cd infra
 npx cdk deploy
 ```
 
-Note outputs: `UserPoolId`, `UserPoolClientId`, `CognitoDomain`, `WebUrl`.
+Note outputs: `UserPoolId`, `UserPoolClientId` (web), `AndroidUserPoolClientId`, `AndroidOAuthRedirectUri`, `CognitoDomain`, `WebUrl`, `ApiUrl`.
+
+## Android app (roadmap #7)
+
+The Android app uses a **separate Cognito app client** in the same user pool as the web app:
+
+| Output | Use |
+|--------|-----|
+| `UserPoolId` | Same pool as web |
+| `AndroidUserPoolClientId` | OAuth client ID in the Android app (**not** `UserPoolClientId`) |
+| `CognitoDomain` | Hosted UI hostname (same as web) |
+| `AndroidOAuthRedirectUri` | `weighttracker://callback` — deep link / intent filter in Android |
+| `ApiUrl` | `{WebUrl}/api/` — API base for the app |
+
+Sign-in flow: Cognito Hosted UI (or equivalent) with **authorization code + PKCE**, same scopes as web. Send the **ID token** on API requests.
+
+The Android app must declare an intent filter for `weighttracker://callback` (and handle logout URI `weighttracker://logout` if using Hosted UI sign-out).
 
 ## Create your first user (admin)
 

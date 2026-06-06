@@ -315,6 +315,30 @@ function handler(event) {
       },
     });
 
+    const androidOAuthRedirectUri = 'weighttracker://callback';
+    const androidOAuthLogoutUri = 'weighttracker://logout';
+
+    const androidUserPoolClient = userPool.addClient('AndroidClient', {
+      userPoolClientName: 'WeightTrackerAndroid',
+      generateSecret: false,
+      authFlows: {
+        userPassword: true,
+        userSrp: true,
+      },
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        scopes: [
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.PROFILE,
+        ],
+        callbackUrls: [androidOAuthRedirectUri],
+        logoutUrls: [androidOAuthLogoutUri],
+      },
+    });
+
     const appConfig = {
       apiBaseUrl: '/api/',
       auth: {
@@ -363,6 +387,17 @@ function handler(event) {
     new cdk.CfnOutput(this, 'UserPoolClientId', {
       value: userPoolClient.userPoolClientId,
       description: 'Cognito app client ID for the web app',
+    });
+
+    new cdk.CfnOutput(this, 'AndroidUserPoolClientId', {
+      value: androidUserPoolClient.userPoolClientId,
+      description: 'Cognito app client ID for the Android app',
+    });
+
+    new cdk.CfnOutput(this, 'AndroidOAuthRedirectUri', {
+      value: androidOAuthRedirectUri,
+      description:
+        'OAuth redirect URI for Android (Hosted UI / PKCE); register matching intent filter in the app',
     });
 
     new cdk.CfnOutput(this, 'CognitoDomain', {

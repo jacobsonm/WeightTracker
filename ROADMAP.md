@@ -179,20 +179,20 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) targets mobile/desktop clients; Android is the first native app.
 
 **Likely direction**  
-- Reuse Cognito auth (Hosted UI or embedded sign-in) and existing REST API.  
-- Offline + sync deferred per original context, or minimal offline queue in a later iteration.  
-- Technology TBD (Kotlin/Jetpack Compose is a common default).
+- **Kotlin + Jetpack Compose** in Android Studio; new `android/` project.  
+- Reuse Cognito auth and existing REST API via CloudFront **`/api/`** (same endpoints as web).  
+- **Separate Cognito app client** for Android (recommended—see **Decisions**); same user pool and users.
+
+**Decisions (v1)**  
+- **Feature parity with web:** sign-in/out; **Home** (add weigh-in + progress summary); **History** (chart, list, delete); **Profile** (display name, birthdate, sex, height, timezone, target weight, intermediate goals, ideal-weight estimate). Same API and behavior as [`web/`](./web/).  
+- **Offline storage and sync:** deferred to **#10** (not in Android v1).  
+- **Cognito app client:** **Separate Android client** (`WeightTrackerAndroid` in CDK)—same user pool and users as web; Android-only OAuth redirect `weighttracker://callback`. Use **`AndroidUserPoolClientId`** output in the app (not `UserPoolClientId`).
 
 **Depends on**  
-Stable API and auth (#1); profile (#2) optional at v1; unified **`/api/`** on CloudFront (#6) for base URL configuration.
-
-**Open questions**  
-- Minimum v1 feature set vs parity with web?  
-- Same Cognito app client or separate mobile client?  
-- When to add offline storage (separate roadmap item)?
+Stable API and auth (#1); profile (#2); unified **`/api/`** on CloudFront (#6). Android Cognito client provisioned in CDK.
 
 **Touches**  
-New `android/` (or similar) project; no backend change required for basic parity.
+New `android/` project; [`AUTH.md`](./AUTH.md) (Android auth section).
 
 ---
 
@@ -257,6 +257,33 @@ Web UI (`web/`), possibly progress summary (#4); [`DYNAMODB_SCHEMA.md`](./DYNAMO
 
 ---
 
+### 10. Offline storage and sync (mobile)
+
+| | |
+|---|---|
+| **Priority** | 10 |
+| **Status** | planned |
+| **Scope** | Mobile clients (Android first, then iOS) work without connectivity and sync weigh-ins (and optionally profile) when online. |
+
+**Why**  
+[`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) calls for offline-capable mobile/desktop apps; not required for Android v1 (#7).
+
+**Likely direction**  
+- Local database on device (e.g. Room on Android); queue outbound changes; reconcile with existing REST API on connect.  
+- Conflict rules TBD (e.g. server wins on same `DateTime` key).
+
+**Depends on**  
+#7 (Android app v1 online-only baseline).
+
+**Open questions**  
+- Sync profile offline or weigh-ins only?  
+- Full history cached locally vs recent window?
+
+**Touches**  
+`android/` (later `ios/`); possibly API extensions if sync metadata is needed.
+
+---
+
 ## Completed (reference)
 
 Milestones already in place:
@@ -303,6 +330,8 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-06-04 | #5 done: Home / Profile / History nav and view layout |
 | 2026-06-04 | #6 done: CloudFront `/api/*` proxy; relative apiBaseUrl on deploy |
 | 2026-06-04 | Swapped #7 (Android) and #8 (dev/prod environments) |
+| 2026-06-04 | #7: v1 web parity; offline → #10; Cognito client TBD |
+| 2026-06-04 | #7: separate Android Cognito client (`WeightTrackerAndroid`) in CDK |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |

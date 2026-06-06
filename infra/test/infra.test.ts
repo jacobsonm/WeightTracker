@@ -50,6 +50,11 @@ test('WeighIns DynamoDB table is created with expected keys', () => {
     },
   });
 
+  template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+    ClientName: 'WeightTrackerAndroid',
+    GenerateSecret: false,
+  });
+
   template.hasResourceProperties('AWS::S3::Bucket', {
     BucketEncryption: {
       ServerSideEncryptionConfiguration: [
