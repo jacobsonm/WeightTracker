@@ -167,38 +167,11 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 
 ---
 
-### 7. Separate AWS environments (production and development)
+### 7. Android app
 
 | | |
 |---|---|
 | **Priority** | 7 (next) |
-| **Status** | planned |
-| **Scope** | Isolated **dev** and **prod** stacks (or accounts), each with its own Cognito pool, DynamoDB tables, API, and CloudFront site. |
-
-**Why**  
-Safe experimentation and testing without affecting live data or users.
-
-**Likely direction**  
-- CDK **stages** or separate stacks/context (`dev`, `prod`) with env-specific naming.  
-- Different AWS accounts (recommended) or same account with distinct resource names.  
-- Separate deploy commands / CI parameters; dev-only Cognito users and smaller blast radius.  
-- Document which outputs/URLs to use per environment.
-
-**Open questions**  
-- Two AWS accounts vs one account with prefixed resources?  
-- Shared CDK bootstrap vs per-environment?  
-- How to promote changes dev → prod (manual deploy vs pipeline)?
-
-**Touches**  
-CDK app entry, stack props, docs, possibly GitHub Actions (future).
-
----
-
-### 8. Android app
-
-| | |
-|---|---|
-| **Priority** | 8 |
 | **Status** | planned |
 | **Scope** | Native **Android** client: sign in, record weigh-ins, view history/chart, sync with existing API. |
 
@@ -220,6 +193,33 @@ Stable API and auth (#1); profile (#2) optional at v1; unified **`/api/`** on Cl
 
 **Touches**  
 New `android/` (or similar) project; no backend change required for basic parity.
+
+---
+
+### 8. Separate AWS environments (production and development)
+
+| | |
+|---|---|
+| **Priority** | 8 |
+| **Status** | planned |
+| **Scope** | Isolated **dev** and **prod** stacks (or accounts), each with its own Cognito pool, DynamoDB tables, API, and CloudFront site. |
+
+**Why**  
+Safe experimentation and testing without affecting live data or users.
+
+**Likely direction**  
+- CDK **stages** or separate stacks/context (`dev`, `prod`) with env-specific naming.  
+- Different AWS accounts (recommended) or same account with distinct resource names.  
+- Separate deploy commands / CI parameters; dev-only Cognito users and smaller blast radius.  
+- Document which outputs/URLs to use per environment.
+
+**Open questions**  
+- Two AWS accounts vs one account with prefixed resources?  
+- Shared CDK bootstrap vs per-environment?  
+- How to promote changes dev → prod (manual deploy vs pipeline)?
+
+**Touches**  
+CDK app entry, stack props, docs, possibly GitHub Actions (future).
 
 ---
 
@@ -302,6 +302,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-06-04 | #4 done: web progress summary (`web/progress.js`) |
 | 2026-06-04 | #5 done: Home / Profile / History nav and view layout |
 | 2026-06-04 | #6 done: CloudFront `/api/*` proxy; relative apiBaseUrl on deploy |
+| 2026-06-04 | Swapped #7 (Android) and #8 (dev/prod environments) |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |
