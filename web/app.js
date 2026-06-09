@@ -382,12 +382,12 @@ function renderProgressSummary(weighIns, profile = loadedProfile) {
 
   appendProgressMetric(
     els.progressSummary,
-    'Starting weight',
+    'Initial weigh-in',
     summary.startingWeight.toFixed(1) + ' lbs',
   );
   appendProgressMetric(
     els.progressSummary,
-    'Current weight',
+    'Last weigh-in',
     summary.currentWeight.toFixed(1) + ' lbs',
   );
   appendProgressMetric(
