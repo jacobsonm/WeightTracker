@@ -2,7 +2,7 @@
 
 Prioritized plan for future work. This document can change as requirements evolve; [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) remains the stable description of overall purpose and architecture.
 
-**Last updated:** 2026-05-31
+**Last updated:** 2026-06-06
 
 ## How to use this document
 
@@ -171,8 +171,8 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 
 | | |
 |---|---|
-| **Priority** | 7 (next) |
-| **Status** | in progress |
+| **Priority** | 7 |
+| **Status** | done |
 | **Scope** | Native **Android** client: sign in, record weigh-ins, view history/chart, sync with existing API. |
 
 **Why**  
@@ -200,7 +200,7 @@ New `android/` project; [`AUTH.md`](./AUTH.md) (Android auth section).
 
 | | |
 |---|---|
-| **Priority** | 8 |
+| **Priority** | 8 (next) |
 | **Status** | planned |
 | **Scope** | Isolated **dev** and **prod** stacks (or accounts), each with its own Cognito pool, DynamoDB tables, API, and CloudFront site. |
 
@@ -332,6 +332,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-06-04 | Swapped #7 (Android) and #8 (dev/prod environments) |
 | 2026-06-04 | #7: v1 web parity; offline → #10; Cognito client TBD |
 | 2026-06-04 | #7: separate Android Cognito client (`WeightTrackerAndroid`) in CDK |
+| 2026-06-06 | #7 done: Kotlin/Compose Android app (`android/`), web parity, tested on physical device |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |
