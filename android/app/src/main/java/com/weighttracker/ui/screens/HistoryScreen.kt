@@ -2,6 +2,7 @@ package com.weighttracker.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,15 +17,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.weighttracker.data.UserProfile
 import com.weighttracker.data.WeighIn
 import com.weighttracker.util.DateTimeUtil
+import java.time.ZoneId
 
 @Composable
 fun HistoryScreen(
@@ -51,17 +55,11 @@ fun HistoryScreen(
                 } else {
                     WeightChart(
                         weighIns = weighIns,
+                        zone = zone,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp)
+                            .height(260.dp)
                             .padding(top = 8.dp),
-                    )
-                    Text(
-                        text = weighIns.joinToString("  •  ") {
-                            "${DateTimeUtil.formatDisplayDate(it.dateTime, zone)}: ${"%.1f".format(it.weight)}"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp),
                     )
                 }
             }
@@ -121,6 +119,7 @@ fun HistoryScreen(
 @Composable
 private fun WeightChart(
     weighIns: List<WeighIn>,
+    zone: ZoneId,
     modifier: Modifier = Modifier,
 ) {
     val weights = weighIns.map { it.weight }
@@ -128,34 +127,125 @@ private fun WeightChart(
     val max = (weights.maxOrNull() ?: 0.0) + 5.0
     val lineColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val labelEntries = chartLabelEntries(weighIns)
 
-    Canvas(modifier = modifier) {
-        if (weights.size < 2) return@Canvas
+    Column(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            if (weights.size < 2) return@Canvas
 
-        val left = 16f
-        val right = size.width - 16f
-        val top = 16f
-        val bottom = size.height - 16f
-        val range = (max - min).coerceAtLeast(1.0)
+            val left = 16f
+            val right = size.width - 16f
+            val top = 16f
+            val bottom = size.height - 16f
+            val range = (max - min).coerceAtLeast(1.0)
 
-        drawLine(
-            color = gridColor,
-            start = Offset(left, bottom),
-            end = Offset(right, bottom),
-            strokeWidth = 2f,
-        )
+            drawLine(
+                color = gridColor,
+                start = Offset(left, bottom),
+                end = Offset(right, bottom),
+                strokeWidth = 2f,
+            )
 
-        val path = Path()
-        weights.forEachIndexed { index, weight ->
-            val x = left + (right - left) * index / weights.lastIndex
-            val y = bottom - ((weight - min) / range * (bottom - top)).toFloat()
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            val path = Path()
+            weights.forEachIndexed { index, weight ->
+                val x = left + (right - left) * index / weights.lastIndex
+                val y = bottom - ((weight - min) / range * (bottom - top)).toFloat()
+                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+
+            drawPath(
+                path = path,
+                color = lineColor,
+                style = Stroke(width = 4f, cap = StrokeCap.Round),
+            )
         }
 
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 4f, cap = StrokeCap.Round),
+        ChartLabelRow(
+            labelEntries = labelEntries,
+            zone = zone,
         )
     }
+}
+
+@Composable
+private fun ChartLabelRow(
+    labelEntries: List<WeighIn>,
+    zone: ZoneId,
+) {
+    when (labelEntries.size) {
+        1 -> {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                ChartPointLabel(
+                    entry = labelEntries[0],
+                    zone = zone,
+                    modifier = Modifier.align(Alignment.Center),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        2 -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                ChartPointLabel(labelEntries[0], zone, textAlign = TextAlign.Start)
+                ChartPointLabel(labelEntries[1], zone, textAlign = TextAlign.End)
+            }
+        }
+        else -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                ChartPointLabel(labelEntries[0], zone, textAlign = TextAlign.Start)
+                ChartPointLabel(
+                    entry = labelEntries[1],
+                    zone = zone,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                )
+                ChartPointLabel(labelEntries[2], zone, textAlign = TextAlign.End)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChartPointLabel(
+    entry: WeighIn,
+    zone: ZoneId,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.Start,
+) {
+    Column(modifier = modifier, horizontalAlignment = alignmentFor(textAlign)) {
+        Text(
+            text = DateTimeUtil.formatDisplayDate(entry.dateTime, zone),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = textAlign,
+        )
+        Text(
+            text = String.format("%.1f lbs", entry.weight),
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = textAlign,
+        )
+    }
+}
+
+private fun alignmentFor(textAlign: TextAlign) = when (textAlign) {
+    TextAlign.Center -> Alignment.CenterHorizontally
+    TextAlign.End, TextAlign.Right -> Alignment.End
+    else -> Alignment.Start
+}
+
+private fun chartLabelEntries(weighIns: List<WeighIn>): List<WeighIn> {
+    if (weighIns.isEmpty()) return emptyList()
+    if (weighIns.size == 1) return listOf(weighIns[0])
+    if (weighIns.size == 2) return listOf(weighIns.first(), weighIns.last())
+    val middle = weighIns[weighIns.size / 2]
+    return listOf(weighIns.first(), middle, weighIns.last())
 }

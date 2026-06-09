@@ -2,6 +2,8 @@ package com.weighttracker.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,15 +12,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.weighttracker.ui.GoalFormRow
+import com.weighttracker.util.ProfileOptions
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     username: String,
@@ -41,6 +54,8 @@ fun ProfileScreen(
     onRemoveGoal: (Int) -> Unit,
     onSave: () -> Unit,
 ) {
+    val timezoneOptions = remember { ProfileOptions.timezoneOptions() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,13 +80,21 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                OutlinedTextField(
-                    value = sex,
-                    onValueChange = onSexChange,
-                    label = { Text("Sex (male/female/other)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
+
+                Text("Sex", style = MaterialTheme.typography.labelLarge)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ProfileOptions.sexOptions.forEach { option ->
+                        FilterChip(
+                            selected = sex == option,
+                            onClick = { onSexChange(option) },
+                            label = { Text(ProfileOptions.sexLabel(option)) },
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = height,
                     onValueChange = onHeightChange,
@@ -79,13 +102,13 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+
+                TimezonePicker(
                     value = timezone,
+                    options = timezoneOptions,
                     onValueChange = onTimezoneChange,
-                    label = { Text("Timezone") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
+
                 idealWeightText?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall)
                 }
@@ -128,6 +151,49 @@ fun ProfileScreen(
                 Text(
                     "Ideal weight is estimated from height and sex (Devine formula). Goals appear as lines on the chart in History.",
                     style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimezonePicker(
+    value: String,
+    options: List<String>,
+    onValueChange: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val displayValue = value.ifBlank { "Select timezone" }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = displayValue,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Timezone") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            options.forEach { zone ->
+                DropdownMenuItem(
+                    text = { Text(zone) },
+                    onClick = {
+                        onValueChange(zone)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
         }

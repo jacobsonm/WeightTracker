@@ -29,8 +29,8 @@ fun ProgressSummaryCard(summary: ProgressSummary) {
             }
 
             val metrics = buildList {
-                add(ProgressMetric("Starting weight", String.format("%.1f lbs", summary.startingWeight)))
-                add(ProgressMetric("Current weight", String.format("%.1f lbs", summary.currentWeight)))
+                add(ProgressMetric("Initial weigh-in", String.format("%.1f lbs", summary.startingWeight)))
+                add(ProgressMetric("Last weigh-in", String.format("%.1f lbs", summary.currentWeight)))
                 add(
                     ProgressMetric(
                         summary.changeLabel ?: "Since first weigh-in",
