@@ -1,12 +1,25 @@
+# IDE / machine-local
 *.iml
-.gradle
-/local.properties
-/.idea/
+.idea/
+local.properties
 .DS_Store
+
+# Gradle
+.gradle/
+
+# Build outputs (root and modules, e.g. app/build/)
 /build
-/captures
-.externalNativeBuild
-.cxx
+/*/build
+build/
+
+# Native / NDK
+.externalNativeBuild/
+.cxx/
+
+# Profiling
+/captures/
+
+# Packaged apps
 *.apk
 *.ap_
 *.aab
