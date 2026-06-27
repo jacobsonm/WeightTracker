@@ -35,7 +35,7 @@ Uses Cognito Hosted UI via [AppAuth](https://github.com/openid/AppAuth-Android) 
 
 ## Notes
 
-- Online-only for v1; offline sync is roadmap **#10**.
+- Online-only for v1; offline sync is roadmap **#11**.
 - Reference lines on the chart (target / ideal / goals) may be added in a follow-up; weight trend and table match web core behavior.
 - If sign-in fails after deploy, confirm `AndroidUserPoolClientId` and that `cdk deploy` ran after the Android client was added.
 

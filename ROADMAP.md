@@ -2,7 +2,7 @@
 
 Prioritized plan for future work. This document can change as requirements evolve; [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) remains the stable description of overall purpose and architecture.
 
-**Last updated:** 2026-06-06
+**Last updated:** 2026-06-07
 
 ## How to use this document
 
@@ -185,7 +185,7 @@ CDK (`infra/lib/infra-stack.ts`), web `config.js` generation, [`AUTH.md`](./AUTH
 
 **Decisions (v1)**  
 - **Feature parity with web:** sign-in/out; **Home** (add weigh-in + progress summary); **History** (chart, list, delete); **Profile** (display name, birthdate, sex, height, timezone, target weight, intermediate goals, ideal-weight estimate). Same API and behavior as [`web/`](./web/).  
-- **Offline storage and sync:** deferred to **#10** (not in Android v1).  
+- **Offline storage and sync:** deferred to **#11** (not in Android v1).  
 - **Cognito app client:** **Separate Android client** (`WeightTrackerAndroid` in CDK)—same user pool and users as web; Android-only OAuth redirect `weighttracker://callback`. Use **`AndroidUserPoolClientId`** output in the app (not `UserPoolClientId`).
 
 **Depends on**  
@@ -196,11 +196,53 @@ New `android/` project; [`AUTH.md`](./AUTH.md) (Android auth section).
 
 ---
 
-### 8. Separate AWS environments (production and development)
+### 8. Store weigh-in weight as a hash (String)
 
 | | |
 |---|---|
 | **Priority** | 8 (next) |
+| **Status** | planned |
+| **Scope** | Persist `weight` on `WeighIns` as a **String** (hashed/encoded form), not a DynamoDB **Number**; migrate existing items without data loss. |
+
+**Why**  
+Privacy / storage hardening goal: weight values should not sit in the table as plain numeric attributes.
+
+**Current state**  
+- `WeighIns.weight` is a **Number** (lbs), plain JSON in API requests/responses.  
+- See [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md).
+
+**Likely direction**  
+- Change stored attribute to **String** (hash or encoded blob—exact algorithm TBD in **Open questions**).  
+- Update **POST/GET/list/delete** Lambdas and all clients (web, Android) to encode on write and decode on read—or define a contract where clients never see plaintext on the wire (TBD).  
+- Document new format in [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md).
+
+**Migration strategy (must not lose data)**  
+1. **Inventory** — Count existing items; export or PITR backup before bulk changes.  
+2. **Dual-read** — Lambdas accept **Number** (legacy) and **String** (new) when reading; normalize to an in-memory numeric weight for progress/chart logic until migration completes.  
+3. **Dual-write or lazy migrate** — On each `PutItem` / touch, write **String** form; optionally backfill legacy rows on read.  
+4. **Batch backfill** — One-off script (similar to [`infra/scripts/migrate-weigh-ins.mjs`](./infra/scripts/migrate-weigh-ins.mjs)): `Scan` → convert each item → `PutItem`; log failures; idempotent reruns.  
+5. **Verify** — Row counts match; sample decode checks; web + Android smoke tests on migrated data.  
+6. **Cutover** — Stop accepting Number on write; remove dual-read after all rows converted (or keep read fallback for a defined period).
+
+**Open questions**  
+- **One-way hash vs reversible encoding:** Charts, progress summary, and goal lines require the **actual weight** at read time. A one-way hash cannot support that unless weights are only ever decrypted on the client—confirm whether the intent is **hash**, **HMAC**, or **encryption** (e.g. KMS / per-user key).  
+- Where key material lives (KMS, Lambda env, Cognito-derived secret).  
+- Whether API JSON still exposes numeric `weight` to clients or only opaque strings.  
+- Rename attribute (`weightHash`) vs reuse `weight` with new type.
+
+**Depends on**  
+Stable weigh-in API and clients (#1, #7).
+
+**Touches**  
+`WeighIns` table usage, weigh-in Lambdas, [`DYNAMODB_SCHEMA.md`](./DYNAMODB_SCHEMA.md), `web/`, `android/`, migration script under `infra/scripts/`.
+
+---
+
+### 9. Separate AWS environments (production and development)
+
+| | |
+|---|---|
+| **Priority** | 9 |
 | **Status** | planned |
 | **Scope** | Isolated **dev** and **prod** stacks (or accounts), each with its own Cognito pool, DynamoDB tables, API, and CloudFront site. |
 
@@ -223,11 +265,11 @@ CDK app entry, stack props, docs, possibly GitHub Actions (future).
 
 ---
 
-### 9. IBW and BMI improvements
+### 10. IBW and BMI improvements
 
 | | |
 |---|---|
-| **Priority** | 9 |
+| **Priority** | 10 |
 | **Status** | planned |
 | **Scope** | Improve how ideal body weight (IBW) and BMI reference information is presented on web; keep current behavior until this item is built. |
 
@@ -257,11 +299,11 @@ Web UI (`web/`), possibly progress summary (#4); [`DYNAMODB_SCHEMA.md`](./DYNAMO
 
 ---
 
-### 10. Offline storage and sync (mobile)
+### 11. Offline storage and sync (mobile)
 
 | | |
 |---|---|
-| **Priority** | 10 |
+| **Priority** | 11 |
 | **Status** | planned |
 | **Scope** | Mobile clients (Android first, then iOS) work without connectivity and sync weigh-ins (and optionally profile) when online. |
 
@@ -333,6 +375,7 @@ Ideas from [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) not ordered above; add p
 | 2026-06-04 | #7: v1 web parity; offline → #10; Cognito client TBD |
 | 2026-06-04 | #7: separate Android Cognito client (`WeightTrackerAndroid`) in CDK |
 | 2026-06-06 | #7 done: Kotlin/Compose Android app (`android/`), web parity, tested on physical device |
+| 2026-06-07 | Added #8 store weight as hash (String) + migration strategy; renumbered envs → #9, IBW → #10, offline → #11 |
 | 2026-05-31 | #4: % progress metric is toward target weight, not ideal weight estimate |
 | 2026-05-31 | #4: v1 total lost since first weigh-in; future prompt for new starting weight |
 | 2026-05-31 | #4: total change UI uses gain vs loss wording when appropriate |
